@@ -1266,3 +1266,191 @@ body.dark .empty {
         gap: 8px;
     }
 }
+
+/* =========================
+   CRAM & JAM
+========================= */
+
+.cram-jam-card {
+    grid-column: span 2;
+}
+
+.cram-jam-card .card-header {
+    margin-bottom: 12px;
+}
+
+.card-subtitle {
+    margin: 4px 0 0;
+
+    color: #a18bb4;
+
+    font-size: 11px;
+}
+
+.spotify-player {
+    min-height: 100px;
+
+    padding: 14px;
+
+    border:
+        1px solid
+        #eee4f7;
+
+    border-radius: 15px;
+
+    background: #faf7ff;
+}
+
+.cram-jam-content {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+.cram-jam-message {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.cram-jam-message strong {
+    color: #6d587f;
+
+    font-size: 13px;
+}
+
+.cram-jam-message span {
+    color: #a18bb4;
+
+    font-size: 11px;
+}
+
+.spotify-input-row {
+    display: flex;
+
+    gap: 8px;
+}
+
+.spotify-input-row input {
+    flex: 1;
+
+    min-width: 0;
+
+    padding:
+        11px
+        12px;
+
+    border:
+        2px solid
+        #e0d2ec;
+
+    border-radius: 11px;
+
+    outline: none;
+
+    background: white;
+    color: #55436b;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.spotify-input-row input:focus {
+    border-color: #b9a1d2;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(185, 161, 210, 0.15);
+}
+
+.spotify-input-row .primary-button {
+    flex-shrink: 0;
+}
+
+.spotify-embed {
+    width: 100%;
+
+    min-height: 0;
+
+    overflow: hidden;
+
+    border-radius: 12px;
+}
+
+.spotify-embed iframe {
+    display: block;
+
+    width: 100%;
+
+    border: 0;
+
+    border-radius: 12px;
+}
+
+
+/* =========================
+   CRAM & JAM — DARK MODE
+========================= */
+
+body.dark .spotify-player {
+    background: #342a3d;
+
+    border-color: #47374f;
+}
+
+body.dark .card-subtitle {
+    color: #ad9bbb;
+}
+
+body.dark .cram-jam-message strong {
+    color: #d8c5e9;
+}
+
+body.dark .cram-jam-message span {
+    color: #ad9bbb;
+}
+
+body.dark .spotify-input-row input {
+    background: #352b3d;
+
+    border-color: #4d3c59;
+
+    color: #eee5f5;
+}
+
+body.dark .spotify-input-row input:focus {
+    border-color: #8f75aa;
+}
+
+
+/* =========================
+   CRAM & JAM — MOBILE
+========================= */
+
+@media (max-width: 800px) {
+
+    .cram-jam-card {
+        grid-column: span 1;
+    }
+}
+
+
+@media (max-width: 560px) {
+
+    .spotify-input-row {
+        flex-direction: column;
+    }
+
+    .spotify-input-row .primary-button {
+        width: 100%;
+    }
+}
