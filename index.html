@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -10,8 +11,13 @@
     >
 
     <meta
+        name="theme-color"
+        content="#9b82b8"
+    >
+
+    <meta
         name="description"
-        content="Due Tomorrow, Do Tomorrow — A little space to get things done"
+        content="Due Tomorrow, Do Tomorrow — A little space to get things done."
     >
 
     <title>Due Tomorrow, Do Tomorrow</title>
@@ -26,6 +32,7 @@
         rel="stylesheet"
         href="style.css"
     >
+
 </head>
 
 
@@ -33,24 +40,32 @@
 
 <div class="app">
 
-    <!-- =========================
-         HEADER
-    ========================== -->
+
+    <!-- =====================================================
+         TOP BAR
+    ====================================================== -->
 
     <header class="topbar">
 
         <div class="brand">
 
             <div class="brand-icon">
-                📚
+                <img
+                    src="./due-tomorrow-favicon.png"
+                    alt=""
+                >
             </div>
 
             <div>
-                <h1>Due Tomorrow, Do Tomorrow</h1>
+
+                <h1>
+                    Due Tomorrow, Do Tomorrow
+                </h1>
 
                 <p>
                     A little space to get things done
                 </p>
+
             </div>
 
         </div>
@@ -59,30 +74,30 @@
         <div class="top-actions">
 
             <button
-                class="icon-button"
                 id="themeButton"
+                class="icon-button"
                 type="button"
-                title="Choose theme"
-                aria-label="Choose theme"
+                title="Change color theme"
+                aria-label="Change color theme"
             >
                 ◐
             </button>
 
 
             <button
-                class="icon-button"
                 id="darkModeButton"
+                class="icon-button"
                 type="button"
                 title="Toggle dark mode"
                 aria-label="Toggle dark mode"
             >
-                🌙
+                ☾
             </button>
 
 
             <button
-                class="icon-button"
                 id="exportButton"
+                class="icon-button"
                 type="button"
                 title="Export data"
                 aria-label="Export data"
@@ -92,8 +107,8 @@
 
 
             <button
-                class="icon-button"
                 id="importButton"
+                class="icon-button"
                 type="button"
                 title="Import data"
                 aria-label="Import data"
@@ -101,43 +116,64 @@
                 ↑
             </button>
 
+
+            <input
+                id="importFile"
+                type="file"
+                accept=".json"
+                hidden
+            >
+
         </div>
 
     </header>
 
 
-    <!-- =========================
-         THEME PANEL
-    ========================== -->
 
-    <div
+    <!-- =====================================================
+         THEME PANEL
+    ====================================================== -->
+
+    <section
         id="themePanel"
-        class="theme-panel"
+        class="theme-panel hidden"
     >
 
         <div class="theme-panel-header">
-            <h3>Choose a theme</h3>
 
-            <button
-                id="closeThemeButton"
-                class="icon-button"
-                type="button"
-                aria-label="Close themes"
-            >
-                ×
-            </button>
+            <div>
+
+                <span class="section-label">
+                    APPEARANCE
+                </span>
+
+                <h2>
+                    Choose a color
+                </h2>
+
+            </div>
+
         </div>
 
 
         <div class="theme-options">
+
 
             <button
                 class="theme-option"
                 data-theme="lavender"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Lavender</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Lavender
+                </span>
+
             </button>
 
 
@@ -146,8 +182,16 @@
                 data-theme="blush"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Blush Pink</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Blush Pink
+                </span>
+
             </button>
 
 
@@ -156,8 +200,16 @@
                 data-theme="blue"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Baby Blue</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Baby Blue
+                </span>
+
             </button>
 
 
@@ -166,8 +218,16 @@
                 data-theme="sage"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Sage Green</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Sage Green
+                </span>
+
             </button>
 
 
@@ -176,8 +236,16 @@
                 data-theme="butter"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Butter</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Butter
+                </span>
+
             </button>
 
 
@@ -186,8 +254,16 @@
                 data-theme="peach"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Soft Peach</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Soft Peach
+                </span>
+
             </button>
 
 
@@ -196,8 +272,16 @@
                 data-theme="mauve"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Dusty Mauve</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Dusty Mauve
+                </span>
+
             </button>
 
 
@@ -206,30 +290,43 @@
                 data-theme="cream"
                 type="button"
             >
-                <span class="theme-swatch"></span>
-                <span>Cream</span>
+
+                <span
+                    class="theme-swatch"
+                    aria-hidden="true"
+                ></span>
+
+                <span>
+                    Cream
+                </span>
+
             </button>
+
 
         </div>
 
-    </div>
+    </section>
 
 
-    <!-- =========================
+
+    <!-- =====================================================
          SEARCH
-    ========================== -->
+    ====================================================== -->
 
     <div class="search-wrapper">
 
-        <span class="search-icon">
+        <span
+            class="search-icon"
+            aria-hidden="true"
+        >
             ⌕
         </span>
 
 
         <input
-            type="search"
             id="globalSearch"
-            placeholder="Search everything..."
+            type="search"
+            placeholder="Search anything..."
             autocomplete="off"
         >
 
@@ -246,9 +343,10 @@
     </div>
 
 
-    <!-- =========================
+
+    <!-- =====================================================
          WELCOME
-    ========================== -->
+    ====================================================== -->
 
     <section class="welcome-card">
 
@@ -265,7 +363,7 @@
 
 
             <p>
-                Let's get things done one step at a time.
+                A little space to get things done.
             </p>
 
         </div>
@@ -295,11 +393,13 @@
     </section>
 
 
-    <!-- =========================
+
+    <!-- =====================================================
          STATS
-    ========================== -->
+    ====================================================== -->
 
     <section class="stats-grid">
+
 
         <div class="stat-card">
 
@@ -308,6 +408,7 @@
             </span>
 
             <div>
+
                 <strong id="statSubjects">
                     0
                 </strong>
@@ -315,6 +416,7 @@
                 <span>
                     Subjects
                 </span>
+
             </div>
 
         </div>
@@ -327,6 +429,7 @@
             </span>
 
             <div>
+
                 <strong id="statTasks">
                     0
                 </strong>
@@ -334,6 +437,7 @@
                 <span>
                     Total Tasks
                 </span>
+
             </div>
 
         </div>
@@ -346,6 +450,7 @@
             </span>
 
             <div>
+
                 <strong id="statPending">
                     0
                 </strong>
@@ -353,6 +458,7 @@
                 <span>
                     Pending
                 </span>
+
             </div>
 
         </div>
@@ -361,10 +467,11 @@
         <div class="stat-card danger-stat">
 
             <span class="stat-icon">
-                ⚠️
+                ⚠
             </span>
 
             <div>
+
                 <strong id="statOverdue">
                     0
                 </strong>
@@ -372,27 +479,35 @@
                 <span>
                     Overdue
                 </span>
+
             </div>
 
         </div>
 
+
     </section>
 
 
-    <!-- =========================
+
+    <!-- =====================================================
          QUICK ACTIONS
-    ========================== -->
+    ====================================================== -->
 
     <section class="quick-actions">
 
+
         <button
-            class="quick-button"
             id="quickTaskButton"
+            class="quick-button"
             type="button"
         >
-            <span>＋</span>
+
+            <span>
+                ＋
+            </span>
 
             <div>
+
                 <strong>
                     Add Task
                 </strong>
@@ -400,19 +515,24 @@
                 <small>
                     Assignment or activity
                 </small>
+
             </div>
 
         </button>
 
 
         <button
-            class="quick-button"
             id="quickSubjectButton"
+            class="quick-button"
             type="button"
         >
-            <span>＋</span>
+
+            <span>
+                ＋
+            </span>
 
             <div>
+
                 <strong>
                     Add Subject
                 </strong>
@@ -420,19 +540,24 @@
                 <small>
                     Add a school subject
                 </small>
+
             </div>
 
         </button>
 
 
         <button
-            class="quick-button"
             id="quickDeadlineButton"
+            class="quick-button"
             type="button"
         >
-            <span>＋</span>
+
+            <span>
+                ＋
+            </span>
 
             <div>
+
                 <strong>
                     Add Deadline
                 </strong>
@@ -440,19 +565,24 @@
                 <small>
                     Important school date
                 </small>
+
             </div>
 
         </button>
 
 
         <button
-            class="quick-button"
             id="quickNoteButton"
+            class="quick-button"
             type="button"
         >
-            <span>＋</span>
+
+            <span>
+                ＋
+            </span>
 
             <div>
+
                 <strong>
                     Add Note
                 </strong>
@@ -460,29 +590,120 @@
                 <small>
                     Save something important
                 </small>
+
             </div>
 
+        </button>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         AI STUDY ASSISTANT
+    ====================================================== -->
+
+    <section class="card ai-card">
+
+        <div class="card-header">
+
+            <div>
+
+                <span class="section-label">
+                    STUDY HELP
+                </span>
+
+                <h2>
+                    AI Study Assistant
+                </h2>
+
+                <p class="card-subtitle">
+                    Ask questions, review lessons, or get help with schoolwork.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="aiChatMessages"
+            class="ai-chat-messages"
+        >
+
+            <div class="ai-message ai-message-assistant">
+
+                <div class="ai-message-bubble">
+
+                    Hi! I'm your study assistant.
+                    What are you working on today?
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="ai-input-area">
+
+            <textarea
+                id="aiInput"
+                class="ai-input"
+                rows="3"
+                maxlength="4000"
+                placeholder="Ask me anything about your studies..."
+            ></textarea>
+
+
+            <button
+                id="aiSendButton"
+                class="primary-button ai-send-button"
+                type="button"
+            >
+                Send
+            </button>
+
+        </div>
+
+
+        <div
+            id="aiStatus"
+            class="ai-status"
+            aria-live="polite"
+        ></div>
+
+
+        <button
+            id="aiClearButton"
+            class="danger-link ai-clear-button"
+            type="button"
+        >
+            Clear conversation
         </button>
 
     </section>
 
 
-    <!-- =========================
-         DASHBOARD
-    ========================== -->
+
+    <!-- =====================================================
+         MAIN DASHBOARD
+    ====================================================== -->
 
     <main class="dashboard-grid">
 
 
-        <!-- =========================
+        <!-- =================================================
              SUBJECTS
-        ========================== -->
+        ================================================== -->
 
         <section class="card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         SCHOOL
                     </span>
@@ -490,12 +711,13 @@
                     <h2>
                         📚 My Subjects
                     </h2>
+
                 </div>
 
 
                 <button
-                    class="text-button"
                     id="addSubjectButton"
+                    class="text-button"
                     type="button"
                 >
                     + Add
@@ -512,15 +734,17 @@
         </section>
 
 
-        <!-- =========================
+
+        <!-- =================================================
              TASKS
-        ========================== -->
+        ================================================== -->
 
         <section class="card card-wide">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         TO-DO
                     </span>
@@ -528,12 +752,13 @@
                     <h2>
                         📝 My Tasks
                     </h2>
+
                 </div>
 
 
                 <button
-                    class="text-button"
                     id="addTaskButton"
+                    class="text-button"
                     type="button"
                 >
                     + Add
@@ -544,8 +769,9 @@
 
             <div class="filter-row">
 
+
                 <button
-                    class="filter-button active task-filter"
+                    class="filter-button active"
                     data-filter="all"
                     type="button"
                 >
@@ -554,8 +780,8 @@
 
 
                 <button
-                    class="filter-button task-filter"
-                    data-filter="active"
+                    class="filter-button"
+                    data-filter="pending"
                     type="button"
                 >
                     Pending
@@ -563,12 +789,22 @@
 
 
                 <button
-                    class="filter-button task-filter"
+                    class="filter-button"
                     data-filter="completed"
                     type="button"
                 >
                     Done
                 </button>
+
+
+                <button
+                    class="filter-button"
+                    data-filter="high"
+                    type="button"
+                >
+                    High Priority
+                </button>
+
 
             </div>
 
@@ -581,28 +817,31 @@
         </section>
 
 
-        <!-- =========================
-             CLASS SCHEDULE
-        ========================== -->
+
+        <!-- =================================================
+             SCHEDULE
+        ================================================== -->
 
         <section class="card card-wide">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         SCHOOL
                     </span>
 
                     <h2>
-                        🗓️ Class Schedule
+                        🗓 Class Schedule
                     </h2>
+
                 </div>
 
 
                 <button
-                    class="text-button"
                     id="addScheduleButton"
+                    class="text-button"
                     type="button"
                 >
                     + Add
@@ -611,42 +850,58 @@
             </div>
 
 
-            <div
-                id="todayClasses"
-                class="today-classes"
-            ></div>
+            <div class="schedule-today">
+
+                <div class="schedule-today-header">
+
+                    <span>
+                        TODAY
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="todayClasses"
+                    class="items-list"
+                ></div>
+
+            </div>
 
 
             <div
                 id="scheduleList"
-                class="items-list"
+                class="items-list schedule-list"
             ></div>
 
         </section>
 
 
-        <!-- =========================
+
+        <!-- =================================================
              DEADLINES
-        ========================== -->
+        ================================================== -->
 
         <section class="card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         CALENDAR
                     </span>
 
                     <h2>
-                        📅 Upcoming Deadlines
+                        📅 Upcoming
                     </h2>
+
                 </div>
 
 
                 <button
-                    class="text-button"
                     id="addDeadlineButton"
+                    class="text-button"
                     type="button"
                 >
                     + Add
@@ -663,28 +918,31 @@
         </section>
 
 
-        <!-- =========================
-             NOTES
-        ========================== -->
 
-        <section class="card card-wide">
+        <!-- =================================================
+             NOTES
+        ================================================== -->
+
+        <section class="card card-wide notes-card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         NOTES
                     </span>
 
                     <h2>
-                        📝 Notes
+                        📓 My Notes
                     </h2>
+
                 </div>
 
 
                 <button
-                    class="text-button"
                     id="addNoteButton"
+                    class="text-button"
                     type="button"
                 >
                     + Add
@@ -695,20 +953,24 @@
 
             <div class="notes-toolbar">
 
+
                 <select
                     id="notesFolderFilter"
-                    aria-label="Filter notes by folder"
+                    class="notes-select"
                 >
+
                     <option value="all">
                         All folders
                     </option>
+
                 </select>
 
 
                 <select
                     id="notesSort"
-                    aria-label="Sort notes"
+                    class="notes-select"
                 >
+
                     <option value="updated">
                         Recently updated
                     </option>
@@ -728,12 +990,13 @@
                     <option value="pinned">
                         Pinned first
                     </option>
+
                 </select>
 
 
                 <button
-                    class="secondary-button small"
                     id="addFolderButton"
+                    class="secondary-button"
                     type="button"
                 >
                     + Folder
@@ -741,33 +1004,36 @@
 
 
                 <button
-                    class="secondary-button small"
                     id="manageFoldersButton"
+                    class="secondary-button"
                     type="button"
                 >
-                    Manage
+                    Manage folders
                 </button>
+
 
             </div>
 
 
             <div
                 id="notesList"
-                class="items-list"
+                class="notes-grid"
             ></div>
 
         </section>
 
 
-        <!-- =========================
-             SCHOOL RESOURCES
-        ========================== -->
+
+        <!-- =================================================
+             SCHOOL LINKS
+        ================================================== -->
 
         <section class="card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         RESOURCES
                     </span>
@@ -775,12 +1041,13 @@
                     <h2>
                         🔗 School Links
                     </h2>
+
                 </div>
 
 
                 <button
-                    class="text-button"
                     id="addLinkButton"
+                    class="text-button"
                     type="button"
                 >
                     + Add
@@ -797,22 +1064,25 @@
         </section>
 
 
-        <!-- =========================
-             CALCULATOR
-        ========================== -->
+
+        <!-- =================================================
+             REGULAR CALCULATOR
+        ================================================== -->
 
         <section class="card calculator-card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         TOOLS
                     </span>
 
                     <h2>
-                        🧮 Calculator
+                        Calculator
                     </h2>
+
                 </div>
 
             </div>
@@ -830,97 +1100,164 @@
 
                 <div class="calculator-grid">
 
-                    <button data-calculator="clear">
+
+                    <button
+                        data-calculator="clear"
+                        type="button"
+                    >
                         C
                     </button>
 
-                    <button data-calculator="(">
-                        (
-                    </button>
 
-                    <button data-calculator=")">
-                        )
-                    </button>
-
-                    <button data-calculator="delete">
+                    <button
+                        data-calculator="delete"
+                        type="button"
+                    >
                         DEL
                     </button>
 
 
-                    <button data-calculator="7">
-                        7
+                    <button
+                        data-calculator="%"
+                        type="button"
+                    >
+                        %
                     </button>
 
-                    <button data-calculator="8">
-                        8
-                    </button>
 
-                    <button data-calculator="9">
-                        9
-                    </button>
-
-                    <button data-calculator="÷">
+                    <button
+                        data-calculator="/"
+                        class="operator-button"
+                        type="button"
+                    >
                         ÷
                     </button>
 
 
-                    <button data-calculator="4">
-                        4
+                    <button
+                        data-calculator="7"
+                        type="button"
+                    >
+                        7
                     </button>
 
-                    <button data-calculator="5">
-                        5
+
+                    <button
+                        data-calculator="8"
+                        type="button"
+                    >
+                        8
                     </button>
 
-                    <button data-calculator="6">
-                        6
+
+                    <button
+                        data-calculator="9"
+                        type="button"
+                    >
+                        9
                     </button>
 
-                    <button data-calculator="×">
+
+                    <button
+                        data-calculator="*"
+                        class="operator-button"
+                        type="button"
+                    >
                         ×
                     </button>
 
 
-                    <button data-calculator="1">
-                        1
+                    <button
+                        data-calculator="4"
+                        type="button"
+                    >
+                        4
                     </button>
 
-                    <button data-calculator="2">
-                        2
+
+                    <button
+                        data-calculator="5"
+                        type="button"
+                    >
+                        5
                     </button>
 
-                    <button data-calculator="3">
-                        3
+
+                    <button
+                        data-calculator="6"
+                        type="button"
+                    >
+                        6
                     </button>
 
-                    <button data-calculator="-">
+
+                    <button
+                        data-calculator="-"
+                        class="operator-button"
+                        type="button"
+                    >
                         −
                     </button>
 
 
-                    <button data-calculator="0">
-                        0
+                    <button
+                        data-calculator="1"
+                        type="button"
+                    >
+                        1
                     </button>
 
-                    <button data-calculator=".">
-                        .
+
+                    <button
+                        data-calculator="2"
+                        type="button"
+                    >
+                        2
                     </button>
 
-                    <button data-calculator="%">
-                        %
+
+                    <button
+                        data-calculator="3"
+                        type="button"
+                    >
+                        3
                     </button>
 
-                    <button data-calculator="+">
+
+                    <button
+                        data-calculator="+"
+                        class="operator-button"
+                        type="button"
+                    >
                         +
                     </button>
 
 
                     <button
-                        class="calculator-equals"
+                        data-calculator="0"
+                        class="zero-button"
+                        type="button"
+                    >
+                        0
+                    </button>
+
+
+                    <button
+                        data-calculator="."
+                        type="button"
+                    >
+                        .
+                    </button>
+
+
+                    <button
                         data-calculator="="
+                        class="equals-button"
+                        type="button"
                     >
                         =
                     </button>
+
 
                 </div>
 
@@ -929,15 +1266,17 @@
         </section>
 
 
-        <!-- =========================
-             SCIENTIFIC CALCULATOR
-        ========================== -->
 
-        <section class="card calculator-card">
+        <!-- =================================================
+             SCIENTIFIC CALCULATOR
+        ================================================== -->
+
+        <section class="card calculator-card scientific-card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         TOOLS
                     </span>
@@ -945,12 +1284,13 @@
                     <h2>
                         Scientific Calculator
                     </h2>
+
                 </div>
 
 
                 <button
                     id="angleModeButton"
-                    class="secondary-button small"
+                    class="secondary-button"
                     type="button"
                 >
                     DEG
@@ -959,7 +1299,8 @@
             </div>
 
 
-            <div class="calculator scientific-calculator">
+            <div class="scientific-calculator">
+
 
                 <div
                     id="scientificDisplay"
@@ -971,152 +1312,159 @@
 
                 <div class="scientific-grid">
 
-                    <button data-scientific="clear">
-                        C
-                    </button>
 
-                    <button data-scientific="delete">
-                        DEL
-                    </button>
-
-                    <button data-scientific="(">
-                        (
-                    </button>
-
-                    <button data-scientific=")">
-                        )
-                    </button>
-
-
-                    <button data-scientific="sin">
+                    <button
+                        data-scientific="sin"
+                        type="button"
+                    >
                         sin
                     </button>
 
-                    <button data-scientific="cos">
+
+                    <button
+                        data-scientific="cos"
+                        type="button"
+                    >
                         cos
                     </button>
 
-                    <button data-scientific="tan">
+
+                    <button
+                        data-scientific="tan"
+                        type="button"
+                    >
                         tan
                     </button>
 
-                    <button data-scientific="sqrt">
+
+                    <button
+                        data-scientific="asin"
+                        type="button"
+                    >
+                        sin⁻¹
+                    </button>
+
+
+                    <button
+                        data-scientific="acos"
+                        type="button"
+                    >
+                        cos⁻¹
+                    </button>
+
+
+                    <button
+                        data-scientific="atan"
+                        type="button"
+                    >
+                        tan⁻¹
+                    </button>
+
+
+                    <button
+                        data-scientific="sqrt"
+                        type="button"
+                    >
                         √
                     </button>
 
 
-                    <button data-scientific="asin">
-                        sin⁻¹
-                    </button>
-
-                    <button data-scientific="acos">
-                        cos⁻¹
-                    </button>
-
-                    <button data-scientific="atan">
-                        tan⁻¹
-                    </button>
-
-                    <button data-scientific="square">
+                    <button
+                        data-scientific="square"
+                        type="button"
+                    >
                         x²
                     </button>
 
 
-                    <button data-scientific="^">
+                    <button
+                        data-scientific="power"
+                        type="button"
+                    >
                         xʸ
                     </button>
 
-                    <button data-scientific="inverse">
+
+                    <button
+                        data-scientific="inverse"
+                        type="button"
+                    >
                         1/x
                     </button>
 
-                    <button data-scientific="π">
+
+                    <button
+                        data-scientific="pi"
+                        type="button"
+                    >
                         π
                     </button>
 
-                    <button data-scientific="e">
+
+                    <button
+                        data-scientific="e"
+                        type="button"
+                    >
                         e
                     </button>
 
 
-                    <button data-scientific="log">
+                    <button
+                        data-scientific="log"
+                        type="button"
+                    >
                         log
                     </button>
 
-                    <button data-scientific="ln">
+
+                    <button
+                        data-scientific="ln"
+                        type="button"
+                    >
                         ln
                     </button>
 
-                    <button data-scientific="7">
-                        7
-                    </button>
-
-                    <button data-scientific="8">
-                        8
-                    </button>
-
-
-                    <button data-scientific="9">
-                        9
-                    </button>
-
-                    <button data-scientific="÷">
-                        ÷
-                    </button>
-
-                    <button data-scientific="4">
-                        4
-                    </button>
-
-                    <button data-scientific="5">
-                        5
-                    </button>
-
-
-                    <button data-scientific="6">
-                        6
-                    </button>
-
-                    <button data-scientific="×">
-                        ×
-                    </button>
-
-                    <button data-scientific="1">
-                        1
-                    </button>
-
-                    <button data-scientific="2">
-                        2
-                    </button>
-
-
-                    <button data-scientific="3">
-                        3
-                    </button>
-
-                    <button data-scientific="-">
-                        −
-                    </button>
-
-                    <button data-scientific="0">
-                        0
-                    </button>
-
-                    <button data-scientific=".">
-                        .
-                    </button>
-
-
-                    <button data-scientific="+">
-                        +
-                    </button>
 
                     <button
-                        class="calculator-equals"
+                        data-scientific="("
+                        type="button"
+                    >
+                        (
+                    </button>
+
+
+                    <button
+                        data-scientific=")"
+                        type="button"
+                    >
+                        )
+                    </button>
+
+
+                    <button
+                        data-scientific="clear"
+                        type="button"
+                    >
+                        C
+                    </button>
+
+
+                    <button
+                        data-scientific="delete"
+                        type="button"
+                    >
+                        DEL
+                    </button>
+
+
+                    <button
                         data-scientific="="
+                        class="equals-button"
+                        type="button"
                     >
                         =
                     </button>
+
 
                 </div>
 
@@ -1125,28 +1473,36 @@
         </section>
 
 
-        <!-- =========================
-             NORMAL TIMER
-        ========================== -->
+
+        <!-- =================================================
+             STUDY TIMER
+        ================================================== -->
 
         <section class="card timer-card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
                         FOCUS
                     </span>
 
                     <h2>
-                        ⏱️ Study Timer
+                        ⏱ Study Timer
                     </h2>
+
+                    <p class="card-subtitle">
+                        Study at your own pace.
+                    </p>
+
                 </div>
 
             </div>
 
 
             <div class="timer">
+
 
                 <div
                     id="timerDisplay"
@@ -1160,11 +1516,12 @@
                     id="timerStatus"
                     class="timer-status"
                 >
-                    Ready
+                    Ready to study
                 </p>
 
 
                 <div class="timer-controls">
+
 
                     <button
                         id="timerStart"
@@ -1183,6 +1540,7 @@
                         Reset
                     </button>
 
+
                 </div>
 
             </div>
@@ -1190,40 +1548,41 @@
         </section>
 
 
-        <!-- =========================
-             TRASH
-        ========================== -->
 
-        <section class="card card-wide trash-section">
+        <!-- =================================================
+             TRASH
+        ================================================== -->
+
+        <section class="card card-wide trash-card">
 
             <div class="card-header">
 
                 <div>
+
                     <span class="section-label">
-                        RECENTLY DELETED
+                        RECYCLE BIN
                     </span>
 
                     <h2>
-                        🗑️ Trash
+                        🗑 Recently Deleted
                     </h2>
+
+                    <p class="card-subtitle">
+                        Restore something you deleted or remove it permanently.
+                    </p>
+
                 </div>
 
 
                 <button
                     id="emptyTrashButton"
-                    class="danger-button"
+                    class="secondary-button"
                     type="button"
                 >
                     Empty Trash
                 </button>
 
             </div>
-
-
-            <p class="section-description">
-                Deleted items stay here until you restore
-                them or permanently delete them.
-            </p>
 
 
             <div
@@ -1237,42 +1596,47 @@
     </main>
 
 
-    <!-- =========================
+
+    <!-- =====================================================
          FOOTER
-    ========================== -->
+    ====================================================== -->
 
     <footer>
 
         <p>
-            Due Tomorrow, Do Tomorrow
+            Made for getting things done.
         </p>
+
 
         <button
             id="clearAllButton"
             class="danger-link"
             type="button"
         >
-            Clear all local data
+            Clear all data
         </button>
 
     </footer>
 
+
 </div>
 
 
-<!-- =========================
+
+<!-- =========================================================
      MODAL
-========================== -->
+========================================================== -->
 
 <div
     id="modalOverlay"
-    class="modal-overlay"
+    class="modal-overlay hidden"
 >
 
     <div
         class="modal"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="modalTitle"
     >
 
         <div class="modal-header">
@@ -1326,9 +1690,10 @@
 </div>
 
 
-<!-- =========================
+
+<!-- =========================================================
      TOAST
-========================== -->
+========================================================== -->
 
 <div
     id="toast"
@@ -1337,7 +1702,13 @@
 ></div>
 
 
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================== -->
+
 <script src="script.js"></script>
 
 </body>
+
 </html>
