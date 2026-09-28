@@ -11,6 +11,8 @@ const supabase = window.supabase.createClient(
     SUPABASE_PUBLISHABLE_KEY
 );
 
+console.log("Supabase connected:", supabase);
+
 /* =========================================================
    DATA
 ========================================================= */
