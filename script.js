@@ -2345,3 +2345,150 @@ updateGreeting();
 updateTimerDisplay();
 
 renderAll();
+
+/* =========================================================
+   CRAM & JAM — SPOTIFY
+========================================================= */
+
+let spotifyEmbedController = null;
+
+function setupCramAndJam() {
+
+    const player = document.getElementById("spotifyPlayer");
+
+    if (!player) {
+        return;
+    }
+
+    player.innerHTML = `
+        <div class="cram-jam-content">
+
+            <div class="cram-jam-message">
+                <strong>Ready to jam?</strong>
+                <span>Paste a Spotify song link below.</span>
+            </div>
+
+            <div class="spotify-input-row">
+
+                <input
+                    type="url"
+                    id="spotifyLinkInput"
+                    placeholder="Paste a Spotify song link..."
+                    autocomplete="off"
+                >
+
+                <button
+                    type="button"
+                    id="spotifyLoadButton"
+                    class="primary-button"
+                >
+                    Play
+                </button>
+
+            </div>
+
+            <div
+                id="spotifyEmbed"
+                class="spotify-embed"
+            ></div>
+
+        </div>
+    `;
+
+    const playButton =
+        document.getElementById("spotifyLoadButton");
+
+    playButton.addEventListener(
+        "click",
+        function() {
+
+            const input =
+                document.getElementById(
+                    "spotifyLinkInput"
+                );
+
+            const url =
+                input.value.trim();
+
+            if (!url) {
+
+                showToast(
+                    "Paste a Spotify song link first."
+                );
+
+                return;
+            }
+
+            if (
+                !url.includes(
+                    "open.spotify.com"
+                )
+            ) {
+
+                showToast(
+                    "Please paste a Spotify link."
+                );
+
+                return;
+            }
+
+            if (!spotifyEmbedController) {
+
+                showToast(
+                    "Spotify player is still loading. Try again in a moment."
+                );
+
+                return;
+            }
+
+            spotifyEmbedController.loadEntity(url);
+
+        }
+    );
+}
+
+
+/* =========================================================
+   SPOTIFY IFRAME API
+========================================================= */
+
+window.onSpotifyIframeApiReady =
+    function(IFrameAPI) {
+
+        const element =
+            document.getElementById(
+                "spotifyEmbed"
+            );
+
+        if (!element) {
+            return;
+        }
+
+        const options = {
+            width: "100%",
+            height: "152"
+        };
+
+        IFrameAPI.createController(
+            element,
+            options,
+            function(EmbedController) {
+
+                spotifyEmbedController =
+                    EmbedController;
+
+                console.log(
+                    "Cram & Jam is ready."
+                );
+
+            }
+        );
+
+    };
+
+
+/* =========================================================
+   START CRAM & JAM
+========================================================= */
+
+setupCramAndJam();
