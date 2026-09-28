@@ -1,225 +1,344 @@
-/* =========================================================
+/* =========================================
    DUE TOMORROW, DO TOMORROW
-   A little space to get things done
-   ========================================================= */
+   Main JavaScript
+   LocalStorage version
+========================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
-    "use strict";
+"use strict";
 
-    /* =========================================================
-       STORAGE
-       ========================================================= */
 
-    const STORAGE_KEY = "dueTomorrowData";
+/* =========================================
+   STORAGE
+========================================= */
 
-    const defaultData = {
-        theme: "lavender",
-        darkMode: false,
+const STORAGE_KEY = "dueTomorrowDoTomorrow";
 
-        subjects: [],
-        tasks: [],
-        deadlines: [],
-        schedule: [],
-        notes: [],
-        folders: [
-            {
-                id: "unfiled",
-                name: "Unfiled"
-            }
-        ],
-        links: [],
+const DEFAULT_DATA = {
+    theme: "lavender",
+    darkMode: false,
 
-        trash: [],
+    subjects: [],
+    tasks: [],
+    deadlines: [],
+    schedule: [],
 
-        timerSeconds: 0
-    };
-
-    let data = loadData();
-
-    function loadData() {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-
-            if (!saved) {
-                return structuredClone(defaultData);
-            }
-
-            const parsed = JSON.parse(saved);
-
-            return {
-                ...structuredClone(defaultData),
-                ...parsed,
-                subjects: parsed.subjects || [],
-                tasks: parsed.tasks || [],
-                deadlines: parsed.deadlines || [],
-                schedule: parsed.schedule || [],
-                notes: parsed.notes || [],
-                folders: parsed.folders?.length
-                    ? parsed.folders
-                    : [{ id: "unfiled", name: "Unfiled" }],
-                links: parsed.links || [],
-                trash: parsed.trash || []
-            };
-        } catch (error) {
-            console.error("Could not load saved data:", error);
-            return structuredClone(defaultData);
+    notes: [],
+    folders: [
+        {
+            id: "folder-unfiled",
+            name: "Unfiled"
         }
+    ],
+
+    links: [],
+
+    trash: [],
+
+    timer: {
+        seconds: 0,
+        running: false
     }
+};
 
-    function saveData() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
 
-    function generateId(prefix = "item") {
-        return (
-            prefix +
-            "_" +
-            Date.now().toString(36) +
-            "_" +
-            Math.random().toString(36).slice(2, 8)
-        );
-    }
+let data = loadData();
 
-    /* =========================================================
-       ELEMENT HELPERS
-       ========================================================= */
+let currentTaskFilter = "all";
 
-    const $ = (selector) => document.querySelector(selector);
-    const $$ = (selector) => document.querySelectorAll(selector);
+let timerInterval = null;
 
-    function escapeHTML(value) {
-        if (value === null || value === undefined) return "";
+let currentModal = null;
 
-        return String(value)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
+let calculatorExpression = "";
 
-    function formatDate(dateString) {
-        if (!dateString) return "No date";
+let scientificExpression = "";
 
-        const date = new Date(dateString + "T00:00:00");
+let angleMode = "DEG";
 
-        if (Number.isNaN(date.getTime())) {
-            return dateString;
+
+/* =========================================
+   HELPERS
+========================================= */
+
+function createId(prefix = "item") {
+    return `${prefix}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+}
+
+
+function saveData() {
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(data)
+    );
+}
+
+
+function loadData() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        if (!saved) {
+            return structuredClone(DEFAULT_DATA);
         }
 
-        return date.toLocaleDateString("en-PH", {
+        const parsed = JSON.parse(saved);
+
+        return {
+            ...structuredClone(DEFAULT_DATA),
+            ...parsed,
+
+            subjects: Array.isArray(parsed.subjects)
+                ? parsed.subjects
+                : [],
+
+            tasks: Array.isArray(parsed.tasks)
+                ? parsed.tasks
+                : [],
+
+            deadlines: Array.isArray(parsed.deadlines)
+                ? parsed.deadlines
+                : [],
+
+            schedule: Array.isArray(parsed.schedule)
+                ? parsed.schedule
+                : [],
+
+            notes: Array.isArray(parsed.notes)
+                ? parsed.notes
+                : [],
+
+            folders: Array.isArray(parsed.folders)
+                ? parsed.folders
+                : structuredClone(DEFAULT_DATA.folders),
+
+            links: Array.isArray(parsed.links)
+                ? parsed.links
+                : [],
+
+            trash: Array.isArray(parsed.trash)
+                ? parsed.trash
+                : []
+        };
+
+    } catch (error) {
+        console.error("Could not load saved data:", error);
+
+        return structuredClone(DEFAULT_DATA);
+    }
+}
+
+
+function escapeHTML(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function formatDate(dateString) {
+    if (!dateString) {
+        return "No date";
+    }
+
+    const date = new Date(`${dateString}T00:00:00`);
+
+    if (Number.isNaN(date.getTime())) {
+        return dateString;
+    }
+
+    return date.toLocaleDateString(
+        "en-US",
+        {
             month: "short",
             day: "numeric",
             year: "numeric"
-        });
-    }
-
-    function formatTime(time) {
-        if (!time) return "";
-
-        const [hourString, minute] = time.split(":");
-        let hour = Number(hourString);
-
-        const suffix = hour >= 12 ? "PM" : "AM";
-
-        hour = hour % 12;
-        if (hour === 0) hour = 12;
-
-        return `${hour}:${minute} ${suffix}`;
-    }
-
-    function todayISO() {
-        const now = new Date();
-
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        const day = String(now.getDate()).padStart(2, "0");
-
-        return `${year}-${month}-${day}`;
-    }
-
-    function showToast(message) {
-        const toast = $("#toast");
-
-        if (!toast) return;
-
-        toast.textContent = message;
-        toast.classList.add("show");
-
-        clearTimeout(showToast.timeout);
-
-        showToast.timeout = setTimeout(() => {
-            toast.classList.remove("show");
-        }, 2500);
-    }
-
-    /* =========================================================
-       THEME
-       ========================================================= */
-
-    function applyTheme() {
-        document.body.dataset.theme = data.theme || "lavender";
-
-        if (data.darkMode) {
-            document.body.classList.add("dark-mode");
-        } else {
-            document.body.classList.remove("dark-mode");
         }
+    );
+}
 
-        $$(".theme-option").forEach(option => {
-            option.classList.toggle(
-                "active",
-                option.dataset.theme === data.theme
-            );
-        });
 
-        const darkButton = $("#darkModeButton");
-
-        if (darkButton) {
-            darkButton.setAttribute(
-                "aria-label",
-                data.darkMode ? "Turn off dark mode" : "Turn on dark mode"
-            );
-
-            darkButton.textContent = data.darkMode
-                ? "☀️"
-                : "🌙";
-        }
+function formatDateTime(dateString) {
+    if (!dateString) {
+        return "";
     }
 
-    function setupTheme() {
-        applyTheme();
+    const date = new Date(dateString);
 
-        const themeButton = $("#themeButton");
-        const themePanel = $("#themePanel");
+    if (Number.isNaN(date.getTime())) {
+        return dateString;
+    }
 
-        themeButton?.addEventListener("click", (event) => {
+    return date.toLocaleString(
+        "en-US",
+        {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit"
+        }
+    );
+}
+
+
+function todayString() {
+    const now = new Date();
+
+    const year = now.getFullYear();
+
+    const month = String(
+        now.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+        now.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+
+function isOverdue(dateString) {
+    return Boolean(
+        dateString &&
+        dateString < todayString()
+    );
+}
+
+
+function getSubjectName(subjectId) {
+    const subject = data.subjects.find(
+        item => item.id === subjectId
+    );
+
+    return subject
+        ? subject.name
+        : "";
+}
+
+
+function getFolderName(folderId) {
+    const folder = data.folders.find(
+        item => item.id === folderId
+    );
+
+    return folder
+        ? folder.name
+        : "Unfiled";
+}
+
+
+/* =========================================
+   THEME
+========================================= */
+
+function applyTheme() {
+    document.documentElement.dataset.theme =
+        data.theme || "lavender";
+
+    document.documentElement.dataset.dark =
+        data.darkMode ? "true" : "false";
+
+    document.querySelectorAll(
+        ".theme-option"
+    ).forEach(button => {
+
+        button.classList.toggle(
+            "active",
+            button.dataset.theme === data.theme
+        );
+    });
+
+    const darkButton =
+        document.getElementById("darkModeButton");
+
+    if (darkButton) {
+        darkButton.textContent =
+            data.darkMode ? "☀" : "🌙";
+    }
+}
+
+
+function setupTheme() {
+
+    const themeButton =
+        document.getElementById("themeButton");
+
+    const themePanel =
+        document.getElementById("themePanel");
+
+    const closeThemeButton =
+        document.getElementById("closeThemeButton");
+
+    const darkModeButton =
+        document.getElementById("darkModeButton");
+
+
+    themeButton?.addEventListener(
+        "click",
+        event => {
+
             event.stopPropagation();
 
-            themePanel?.classList.toggle("open");
-        });
+            themePanel.classList.toggle("open");
+        }
+    );
 
-        $$(".theme-option").forEach(option => {
-            option.addEventListener("click", () => {
-                data.theme = option.dataset.theme || "lavender";
+
+    closeThemeButton?.addEventListener(
+        "click",
+        () => {
+            themePanel.classList.remove("open");
+        }
+    );
+
+
+    document.querySelectorAll(
+        ".theme-option"
+    ).forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                data.theme =
+                    button.dataset.theme;
 
                 saveData();
+
                 applyTheme();
 
-                themePanel?.classList.remove("open");
+                showToast(
+                    `${button.textContent.trim()} theme selected`
+                );
+            }
+        );
+    });
 
-                showToast("Theme changed.");
-            });
-        });
 
-        $("#darkModeButton")?.addEventListener("click", () => {
-            data.darkMode = !data.darkMode;
+    darkModeButton?.addEventListener(
+        "click",
+        () => {
+
+            data.darkMode =
+                !data.darkMode;
 
             saveData();
-            applyTheme();
-        });
 
-        document.addEventListener("click", (event) => {
+            applyTheme();
+        }
+    );
+
+
+    document.addEventListener(
+        "click",
+        event => {
+
             if (
                 themePanel &&
                 !themePanel.contains(event.target) &&
@@ -227,2570 +346,4139 @@ document.addEventListener("DOMContentLoaded", () => {
             ) {
                 themePanel.classList.remove("open");
             }
-        });
+        }
+    );
+}
+
+
+/* =========================================
+   GREETING
+========================================= */
+
+function updateGreeting() {
+
+    const greeting =
+        document.getElementById("greeting");
+
+    if (!greeting) {
+        return;
     }
 
-    /* =========================================================
-       WELCOME MESSAGE
-       ========================================================= */
+    const hour = new Date().getHours();
 
-    function updateWelcome() {
-        const welcome = $("#welcomeText");
+    let text = "Good evening!";
 
-        if (!welcome) return;
-
-        const hour = new Date().getHours();
-
-        let greeting = "Good evening";
-
-        if (hour < 12) {
-            greeting = "Good morning";
-        } else if (hour < 18) {
-            greeting = "Good afternoon";
-        }
-
-        welcome.textContent = greeting + "!";
+    if (hour < 12) {
+        text = "Good morning!";
+    } else if (hour < 18) {
+        text = "Good afternoon!";
     }
 
-    /* =========================================================
-       SUBJECTS
-       ========================================================= */
+    greeting.textContent = text;
+}
 
-    function renderSubjects() {
-        const container = $("#subjectsList");
 
-        if (!container) return;
+/* =========================================
+   STATS
+========================================= */
 
-        if (!data.subjects.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">📚</div>
-                    <p>No subjects yet.</p>
-                    <button class="small-button" data-action="add-subject">
-                        Add a subject
-                    </button>
-                </div>
-            `;
+function updateStats() {
 
-            return;
-        }
+    const totalTasks =
+        data.tasks.length;
 
-        container.innerHTML = data.subjects
-            .map(subject => {
-                const taskCount = data.tasks.filter(
-                    task => task.subjectId === subject.id
-                ).length;
+    const completedTasks =
+        data.tasks.filter(
+            task => task.completed
+        ).length;
 
-                const completedCount = data.tasks.filter(
-                    task =>
-                        task.subjectId === subject.id &&
-                        task.completed
-                ).length;
+    const pendingTasks =
+        totalTasks - completedTasks;
 
-                return `
-                    <div
-                        class="subject-card"
-                        style="--subject-color:${escapeHTML(subject.color || "#b99acb")}"
-                    >
-                        <div class="subject-color"></div>
+    const overdueTasks =
+        data.tasks.filter(
+            task =>
+                !task.completed &&
+                isOverdue(task.dueDate)
+        ).length;
 
-                        <div class="subject-info">
-                            <h3>${escapeHTML(subject.name)}</h3>
-                            <p>
-                                ${completedCount}/${taskCount}
-                                task${taskCount === 1 ? "" : "s"} completed
-                            </p>
-                        </div>
 
-                        <div class="card-actions">
-                            <button
-                                class="icon-button"
-                                data-action="edit-subject"
-                                data-id="${subject.id}"
-                                title="Edit"
-                            >✎</button>
+    const progress =
+        totalTasks === 0
+            ? 0
+            : Math.round(
+                completedTasks /
+                totalTasks *
+                100
+            );
 
-                            <button
-                                class="icon-button danger"
-                                data-action="delete-subject"
-                                data-id="${subject.id}"
-                                title="Delete"
-                            >×</button>
-                        </div>
-                    </div>
-                `;
-            })
-            .join("");
+
+    document.getElementById(
+        "statSubjects"
+    ).textContent =
+        data.subjects.length;
+
+
+    document.getElementById(
+        "statTasks"
+    ).textContent =
+        totalTasks;
+
+
+    document.getElementById(
+        "statPending"
+    ).textContent =
+        pendingTasks;
+
+
+    document.getElementById(
+        "statOverdue"
+    ).textContent =
+        overdueTasks;
+
+
+    document.getElementById(
+        "progressNumber"
+    ).textContent =
+        `${progress}%`;
+
+
+    const ring =
+        document.querySelector(".progress-ring");
+
+    if (ring) {
+
+        ring.style.background =
+            `conic-gradient(
+                var(--primary) ${progress * 3.6}deg,
+                var(--border) ${progress * 3.6}deg
+            )`;
     }
+}
 
-    /* =========================================================
-       TASKS
-       ========================================================= */
 
-    let currentTaskFilter = "all";
+/* =========================================
+   MODAL
+========================================= */
 
-    function renderTasks() {
-        const container = $("#tasksList");
+function openModal(
+    title,
+    fields,
+    onSubmit
+) {
 
-        if (!container) return;
+    const overlay =
+        document.getElementById(
+            "modalOverlay"
+        );
 
-        let tasks = [...data.tasks];
+    const modalTitle =
+        document.getElementById(
+            "modalTitle"
+        );
 
-        if (currentTaskFilter === "active") {
-            tasks = tasks.filter(task => !task.completed);
-        }
+    const modalFields =
+        document.getElementById(
+            "modalFields"
+        );
 
-        if (currentTaskFilter === "completed") {
-            tasks = tasks.filter(task => task.completed);
-        }
-
-        tasks.sort((a, b) => {
-            if (a.completed !== b.completed) {
-                return a.completed ? 1 : -1;
-            }
-
-            if (!a.dueDate && !b.dueDate) return 0;
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-
-            return a.dueDate.localeCompare(b.dueDate);
-        });
-
-        if (!tasks.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">✓</div>
-                    <p>
-                        ${
-                            currentTaskFilter === "completed"
-                                ? "No completed tasks yet."
-                                : "No tasks here."
-                        }
-                    </p>
-                </div>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = tasks
-            .map(task => {
-                const subject = data.subjects.find(
-                    subject => subject.id === task.subjectId
-                );
-
-                const priorityClass =
-                    task.priority === "high"
-                        ? "priority-high"
-                        : task.priority === "medium"
-                        ? "priority-medium"
-                        : "priority-low";
-
-                return `
-                    <div class="task-card ${task.completed ? "completed" : ""}">
-                        <button
-                            class="task-check"
-                            data-action="toggle-task"
-                            data-id="${task.id}"
-                            aria-label="Complete task"
-                        >
-                            ${task.completed ? "✓" : ""}
-                        </button>
-
-                        <div class="task-content">
-                            <h3>${escapeHTML(task.title || "Untitled task")}</h3>
-
-                            ${
-                                task.description
-                                    ? `<p>${escapeHTML(task.description)}</p>`
-                                    : ""
-                            }
-
-                            <div class="task-meta">
-                                ${
-                                    subject
-                                        ? `<span>${escapeHTML(subject.name)}</span>`
-                                        : ""
-                                }
-
-                                ${
-                                    task.dueDate
-                                        ? `<span>Due ${formatDate(task.dueDate)}</span>`
-                                        : ""
-                                }
-
-                                ${
-                                    task.priority
-                                        ? `<span class="${priorityClass}">
-                                            ${escapeHTML(task.priority)}
-                                           </span>`
-                                        : ""
-                                }
-                            </div>
-                        </div>
-
-                        <div class="card-actions">
-                            <button
-                                class="icon-button"
-                                data-action="edit-task"
-                                data-id="${task.id}"
-                                title="Edit"
-                            >✎</button>
-
-                            <button
-                                class="icon-button danger"
-                                data-action="delete-task"
-                                data-id="${task.id}"
-                                title="Delete"
-                            >×</button>
-                        </div>
-                    </div>
-                `;
-            })
-            .join("");
-    }
-
-    function setupTaskFilters() {
-        $$(".task-filter").forEach(button => {
-            button.addEventListener("click", () => {
-                $$(".task-filter").forEach(btn =>
-                    btn.classList.remove("active")
-                );
-
-                button.classList.add("active");
-
-                currentTaskFilter =
-                    button.dataset.filter || "all";
-
-                renderTasks();
-            });
-        });
-    }
-
-    /* =========================================================
-       DEADLINES
-       ========================================================= */
-
-    function renderDeadlines() {
-        const container = $("#deadlinesList");
-
-        if (!container) return;
-
-        const deadlines = [...data.deadlines]
-            .sort((a, b) => {
-                return (a.date || "").localeCompare(b.date || "");
-            })
-            .slice(0, 10);
-
-        if (!deadlines.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">📅</div>
-                    <p>No upcoming deadlines.</p>
-                </div>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = deadlines
-            .map(deadline => {
-                const overdue =
-                    deadline.date &&
-                    deadline.date < todayISO();
-
-                return `
-                    <div class="deadline-card ${overdue ? "overdue" : ""}">
-                        <div class="deadline-date">
-                            <span>${formatDate(deadline.date)}</span>
-                        </div>
-
-                        <div class="deadline-info">
-                            <h3>${escapeHTML(deadline.title)}</h3>
-
-                            ${
-                                deadline.description
-                                    ? `<p>${escapeHTML(deadline.description)}</p>`
-                                    : ""
-                            }
-                        </div>
-
-                        <div class="card-actions">
-                            <button
-                                class="icon-button"
-                                data-action="edit-deadline"
-                                data-id="${deadline.id}"
-                            >✎</button>
-
-                            <button
-                                class="icon-button danger"
-                                data-action="delete-deadline"
-                                data-id="${deadline.id}"
-                            >×</button>
-                        </div>
-                    </div>
-                `;
-            })
-            .join("");
-    }
-
-    /* =========================================================
-       CLASS SCHEDULE
-       ========================================================= */
-
-    const weekdayOrder = {
-        Monday: 1,
-        Tuesday: 2,
-        Wednesday: 3,
-        Thursday: 4,
-        Friday: 5,
-        Saturday: 6,
-        Sunday: 7
+    currentModal = {
+        onSubmit
     };
 
-    function getTodayName() {
-        return new Date().toLocaleDateString("en-US", {
-            weekday: "long"
-        });
-    }
 
-    function sortSchedule(items) {
-        return [...items].sort((a, b) => {
-            const dayDifference =
-                (weekdayOrder[a.day] || 99) -
-                (weekdayOrder[b.day] || 99);
+    modalTitle.textContent = title;
 
-            if (dayDifference !== 0) {
-                return dayDifference;
-            }
+    modalFields.innerHTML =
+        fields.map(fieldHTML).join("");
 
-            return (a.startTime || "").localeCompare(
-                b.startTime || ""
-            );
-        });
-    }
 
-    function renderSchedule() {
-        const container = $("#scheduleList");
-        const todayContainer = $("#todayClasses");
+    overlay.classList.add("open");
 
-        const sorted = sortSchedule(data.schedule);
 
-        if (container) {
-            if (!sorted.length) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">🗓️</div>
-                        <p>No class schedule yet.</p>
-                        <button
-                            class="small-button"
-                            data-action="add-schedule"
-                        >
-                            Add class
-                        </button>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = sorted
-                    .map(item => scheduleHTML(item))
-                    .join("");
-            }
-        }
+    const firstInput =
+        modalFields.querySelector(
+            "input, textarea, select"
+        );
 
-        if (todayContainer) {
-            const today = getTodayName();
+    setTimeout(
+        () => firstInput?.focus(),
+        50
+    );
+}
 
-            const todayClasses = sorted.filter(
-                item => item.day === today
-            );
 
-            if (!todayClasses.length) {
-                todayContainer.innerHTML = `
-                    <div class="today-empty">
-                        No classes today.
-                    </div>
-                `;
-            } else {
-                todayContainer.innerHTML = todayClasses
-                    .map(item => scheduleHTML(item, true))
-                    .join("");
-            }
-        }
-    }
+function fieldHTML(field) {
 
-    function scheduleHTML(item, today = false) {
+    const value =
+        field.value ?? "";
+
+    const required =
+        field.required
+            ? "required"
+            : "";
+
+
+    if (field.type === "textarea") {
+
         return `
-            <div class="schedule-card ${today ? "today-class" : ""}">
-                <div class="schedule-time">
-                    <strong>${formatTime(item.startTime)}</strong>
-                    <span>${formatTime(item.endTime)}</span>
-                </div>
+            <div class="form-group">
+                <label for="${field.id}">
+                    ${escapeHTML(field.label)}
+                </label>
 
-                <div class="schedule-info">
-                    <span class="schedule-day">
-                        ${escapeHTML(item.day)}
-                    </span>
-
-                    <h3>${escapeHTML(item.subject)}</h3>
-
-                    ${
-                        item.teacher
-                            ? `<p>${escapeHTML(item.teacher)}</p>`
-                            : ""
-                    }
-                </div>
-
-                <div class="card-actions">
-                    <button
-                        class="icon-button"
-                        data-action="edit-schedule"
-                        data-id="${item.id}"
-                    >✎</button>
-
-                    <button
-                        class="icon-button danger"
-                        data-action="delete-schedule"
-                        data-id="${item.id}"
-                    >×</button>
-                </div>
+                <textarea
+                    id="${field.id}"
+                    name="${field.id}"
+                    ${required}
+                    placeholder="${escapeHTML(
+                        field.placeholder || ""
+                    )}"
+                >${escapeHTML(value)}</textarea>
             </div>
         `;
     }
 
-    /* =========================================================
-       NOTES
-       ========================================================= */
 
-    let notesSort = "updated";
-    let selectedFolder = "all";
+    if (field.type === "select") {
 
-    function renderFolderFilter() {
-        const select = $("#notesFolderFilter");
+        const options =
+            (field.options || [])
+                .map(option => {
 
-        if (!select) return;
+                    const selected =
+                        option.value === value
+                            ? "selected"
+                            : "";
 
-        select.innerHTML = `
-            <option value="all">All folders</option>
-            ${data.folders
-                .map(
-                    folder => `
-                    <option value="${folder.id}">
-                        ${escapeHTML(folder.name)}
-                    </option>
-                `
-                )
-                .join("")}
+                    return `
+                        <option
+                            value="${escapeHTML(option.value)}"
+                            ${selected}
+                        >
+                            ${escapeHTML(option.label)}
+                        </option>
+                    `;
+                })
+                .join("");
+
+
+        return `
+            <div class="form-group">
+                <label for="${field.id}">
+                    ${escapeHTML(field.label)}
+                </label>
+
+                <select
+                    id="${field.id}"
+                    name="${field.id}"
+                    ${required}
+                >
+                    ${options}
+                </select>
+            </div>
         `;
-
-        select.value = selectedFolder;
     }
 
-    function renderNotes() {
-        const container = $("#notesList");
 
-        if (!container) return;
+    return `
+        <div class="form-group">
+            <label for="${field.id}">
+                ${escapeHTML(field.label)}
+            </label>
 
-        let notes = [...data.notes];
+            <input
+                id="${field.id}"
+                name="${field.id}"
+                type="${field.type || "text"}"
+                value="${escapeHTML(value)}"
+                ${required}
+                placeholder="${escapeHTML(
+                    field.placeholder || ""
+                )}"
+            >
+        </div>
+    `;
+}
 
-        if (selectedFolder !== "all") {
-            notes = notes.filter(
-                note => (note.folderId || "unfiled") === selectedFolder
+
+function closeModal() {
+
+    const overlay =
+        document.getElementById(
+            "modalOverlay"
+        );
+
+    overlay.classList.remove("open");
+
+    currentModal = null;
+}
+
+
+function setupModal() {
+
+    document.getElementById(
+        "modalClose"
+    )?.addEventListener(
+        "click",
+        closeModal
+    );
+
+
+    document.getElementById(
+        "modalCancel"
+    )?.addEventListener(
+        "click",
+        closeModal
+    );
+
+
+    document.getElementById(
+        "modalOverlay"
+    )?.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target.id ===
+                "modalOverlay"
+            ) {
+                closeModal();
+            }
+        }
+    );
+
+
+    document.getElementById(
+        "modalForm"
+    )?.addEventListener(
+        "submit",
+        event => {
+
+            event.preventDefault();
+
+            if (!currentModal) {
+                return;
+            }
+
+            const form =
+                new FormData(event.target);
+
+            const values =
+                Object.fromEntries(form.entries());
+
+            currentModal.onSubmit(values);
+
+            closeModal();
+        }
+    );
+}
+
+
+/* =========================================
+   SUBJECTS
+========================================= */
+
+function renderSubjects() {
+
+    const container =
+        document.getElementById(
+            "subjectsList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    if (data.subjects.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                No subjects yet.
+                Add your first subject.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML =
+        data.subjects.map(subject => {
+
+            const color =
+                subject.color || "var(--primary)";
+
+
+            return `
+                <div
+                    class="subject-item"
+                    data-search="${escapeHTML(
+                        subject.name
+                    )}"
+                >
+
+                    <div
+                        class="subject-color"
+                        style="background:${escapeHTML(color)}"
+                    ></div>
+
+                    <div class="subject-icon">
+                        ${escapeHTML(
+                            subject.icon || "📚"
+                        )}
+                    </div>
+
+                    <div class="item-main">
+                        <div class="item-title">
+                            ${escapeHTML(subject.name)}
+                        </div>
+                    </div>
+
+                    <div class="item-actions">
+
+                        <button
+                            class="item-action"
+                            data-action="edit-subject"
+                            data-id="${subject.id}"
+                            type="button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            class="item-action"
+                            data-action="delete-subject"
+                            data-id="${subject.id}"
+                            type="button"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                </div>
+            `;
+        }).join("");
+}
+
+
+function addSubject(existing = null) {
+
+    const isEdit =
+        Boolean(existing);
+
+
+    const fields = [
+
+        {
+            id: "name",
+            label: "Subject name",
+            type: "text",
+            value: existing?.name || "",
+            required: true,
+            placeholder: "e.g. General Mathematics"
+        },
+
+        {
+            id: "color",
+            label: "Color",
+            type: "text",
+            value:
+                existing?.color ||
+                "#9d82b8",
+            required: true,
+            placeholder: "#9d82b8"
+        },
+
+        {
+            id: "icon",
+            label: "Icon (optional)",
+            type: "text",
+            value: existing?.icon || "",
+            placeholder: "e.g. 📖"
+        }
+
+    ];
+
+
+    openModal(
+        isEdit
+            ? "Edit Subject"
+            : "Add Subject",
+
+        fields,
+
+        values => {
+
+            if (isEdit) {
+
+                existing.name =
+                    values.name.trim();
+
+                existing.color =
+                    values.color.trim();
+
+                existing.icon =
+                    values.icon.trim();
+
+            } else {
+
+                data.subjects.push({
+
+                    id: createId("subject"),
+
+                    name:
+                        values.name.trim(),
+
+                    color:
+                        values.color.trim(),
+
+                    icon:
+                        values.icon.trim(),
+
+                    createdAt:
+                        new Date().toISOString()
+                });
+            }
+
+
+            saveData();
+
+            renderAll();
+
+            showToast(
+                isEdit
+                    ? "Subject updated"
+                    : "Subject added"
             );
         }
+    );
+}
 
-        if (notesSort === "updated") {
-            notes.sort(
-                (a, b) =>
-                    new Date(b.updatedAt || b.createdAt) -
-                    new Date(a.updatedAt || a.createdAt)
+
+/* =========================================
+   TASKS
+========================================= */
+
+function renderTasks() {
+
+    const container =
+        document.getElementById(
+            "tasksList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    let tasks =
+        [...data.tasks];
+
+
+    if (currentTaskFilter === "active") {
+
+        tasks =
+            tasks.filter(
+                task => !task.completed
             );
-        }
+    }
 
-        if (notesSort === "created") {
-            notes.sort(
-                (a, b) =>
-                    new Date(b.createdAt) -
-                    new Date(a.createdAt)
+
+    if (currentTaskFilter === "completed") {
+
+        tasks =
+            tasks.filter(
+                task => task.completed
             );
+    }
+
+
+    tasks.sort(
+        (a, b) => {
+
+            if (
+                !a.dueDate &&
+                !b.dueDate
+            ) {
+                return 0;
+            }
+
+            if (!a.dueDate) {
+                return 1;
+            }
+
+            if (!b.dueDate) {
+                return -1;
+            }
+
+            return a.dueDate
+                .localeCompare(b.dueDate);
         }
+    );
 
-        if (notesSort === "az") {
-            notes.sort((a, b) =>
-                (a.title || "").localeCompare(b.title || "")
-            );
-        }
 
-        if (notesSort === "za") {
-            notes.sort((a, b) =>
-                (b.title || "").localeCompare(a.title || "")
-            );
-        }
+    if (tasks.length === 0) {
 
-        if (notesSort === "pinned") {
-            notes.sort((a, b) => {
-                if (a.pinned !== b.pinned) {
-                    return a.pinned ? -1 : 1;
-                }
+        container.innerHTML = `
+            <div class="empty-state">
+                Nothing here yet.
+            </div>
+        `;
 
-                return new Date(b.updatedAt || b.createdAt) -
-                    new Date(a.updatedAt || a.createdAt);
-            });
-        }
+        return;
+    }
 
-        if (!notes.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">📝</div>
-                    <p>No notes here yet.</p>
-                    <button
-                        class="small-button"
-                        data-action="add-note"
+
+    container.innerHTML =
+        tasks.map(task => {
+
+            const overdue =
+                !task.completed &&
+                isOverdue(task.dueDate);
+
+
+            const priority =
+                task.priority
+                    ? `
+                        <span
+                            class="priority-badge priority-${escapeHTML(
+                                task.priority
+                            )}"
+                        >
+                            ${escapeHTML(
+                                task.priority
+                            )}
+                        </span>
+                    `
+                    : "";
+
+
+            return `
+                <div
+                    class="
+                        item
+                        task-item
+                        ${task.completed
+                            ? "task-completed"
+                            : ""}
+                    "
+                    data-search="${escapeHTML(
+                        `${task.title} ${task.description || ""} ${getSubjectName(task.subjectId)}`
+                    )}"
+                >
+
+                    <input
+                        class="task-check"
+                        type="checkbox"
+                        data-action="toggle-task"
+                        data-id="${task.id}"
+                        ${task.completed ? "checked" : ""}
+                        aria-label="Mark task complete"
                     >
-                        Create a note
-                    </button>
+
+
+                    <div class="item-main">
+
+                        <div class="item-title">
+                            ${escapeHTML(
+                                task.title
+                            )}
+                        </div>
+
+
+                        ${
+                            task.description
+                                ? `
+                                    <div class="item-meta">
+                                        ${escapeHTML(
+                                            task.description
+                                        )}
+                                    </div>
+                                `
+                                : ""
+                        }
+
+
+                        <div>
+
+                            ${
+                                task.subjectId
+                                    ? `
+                                        <span class="folder-label">
+                                            ${escapeHTML(
+                                                getSubjectName(
+                                                    task.subjectId
+                                                )
+                                            )}
+                                        </span>
+                                    `
+                                    : ""
+                            }
+
+
+                            ${priority}
+
+
+                            ${
+                                task.dueDate
+                                    ? `
+                                        <span
+                                            class="item-meta"
+                                            style="${
+                                                overdue
+                                                    ? "color:var(--danger);font-weight:700;"
+                                                    : ""
+                                            }"
+                                        >
+                                            Due ${formatDate(
+                                                task.dueDate
+                                            )}
+                                        </span>
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="item-actions">
+
+                        <button
+                            class="item-action"
+                            data-action="edit-task"
+                            data-id="${task.id}"
+                            type="button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            class="item-action"
+                            data-action="delete-task"
+                            data-id="${task.id}"
+                            type="button"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                </div>
+            `;
+        }).join("");
+}
+
+
+function taskFields(existing = null) {
+
+    const subjectOptions = [
+        {
+            value: "",
+            label: "No subject"
+        },
+
+        ...data.subjects.map(subject => ({
+            value: subject.id,
+            label: subject.name
+        }))
+    ];
+
+
+    return [
+
+        {
+            id: "title",
+            label: "Task title",
+            type: "text",
+            value: existing?.title || "",
+            required: true,
+            placeholder: "e.g. Finish Module 6"
+        },
+
+        {
+            id: "description",
+            label: "Description",
+            type: "textarea",
+            value: existing?.description || "",
+            placeholder: "Optional details"
+        },
+
+        {
+            id: "subjectId",
+            label: "Subject",
+            type: "select",
+            value: existing?.subjectId || "",
+            options: subjectOptions
+        },
+
+        {
+            id: "dueDate",
+            label: "Due date",
+            type: "date",
+            value: existing?.dueDate || ""
+        },
+
+        {
+            id: "priority",
+            label: "Priority",
+            type: "select",
+            value: existing?.priority || "medium",
+            options: [
+                {
+                    value: "low",
+                    label: "Low"
+                },
+                {
+                    value: "medium",
+                    label: "Medium"
+                },
+                {
+                    value: "high",
+                    label: "High"
+                }
+            ]
+        }
+
+    ];
+}
+
+
+function addTask(existing = null) {
+
+    openModal(
+        existing
+            ? "Edit Task"
+            : "Add Task",
+
+        taskFields(existing),
+
+        values => {
+
+            if (existing) {
+
+                existing.title =
+                    values.title.trim();
+
+                existing.description =
+                    values.description.trim();
+
+                existing.subjectId =
+                    values.subjectId;
+
+                existing.dueDate =
+                    values.dueDate;
+
+                existing.priority =
+                    values.priority;
+
+                existing.updatedAt =
+                    new Date().toISOString();
+
+            } else {
+
+                data.tasks.push({
+
+                    id: createId("task"),
+
+                    title:
+                        values.title.trim(),
+
+                    description:
+                        values.description.trim(),
+
+                    subjectId:
+                        values.subjectId,
+
+                    dueDate:
+                        values.dueDate,
+
+                    priority:
+                        values.priority,
+
+                    completed: false,
+
+                    createdAt:
+                        new Date().toISOString(),
+
+                    updatedAt:
+                        new Date().toISOString()
+                });
+            }
+
+
+            saveData();
+
+            renderAll();
+
+            showToast(
+                existing
+                    ? "Task updated"
+                    : "Task added"
+            );
+        }
+    );
+}
+
+
+/* =========================================
+   DEADLINES
+========================================= */
+
+function renderDeadlines() {
+
+    const container =
+        document.getElementById(
+            "deadlinesList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    const deadlines =
+        [...data.deadlines]
+            .sort(
+                (a, b) =>
+                    (a.date || "")
+                        .localeCompare(
+                            b.date || ""
+                        )
+            );
+
+
+    if (deadlines.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                No deadlines yet.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML =
+        deadlines.map(deadline => {
+
+            const overdue =
+                isOverdue(deadline.date);
+
+
+            return `
+                <div
+                    class="
+                        item
+                        deadline-item
+                        ${overdue ? "overdue" : ""}
+                    "
+                    data-search="${escapeHTML(
+                        `${deadline.title} ${deadline.description || ""}`
+                    )}"
+                >
+
+                    <div class="item-main">
+
+                        <div class="item-title">
+                            ${escapeHTML(
+                                deadline.title
+                            )}
+                        </div>
+
+
+                        <div
+                            class="deadline-date"
+                        >
+                            ${
+                                overdue
+                                    ? "Overdue · "
+                                    : ""
+                            }
+
+                            ${formatDate(
+                                deadline.date
+                            )}
+                        </div>
+
+
+                        ${
+                            deadline.description
+                                ? `
+                                    <div class="item-meta">
+                                        ${escapeHTML(
+                                            deadline.description
+                                        )}
+                                    </div>
+                                `
+                                : ""
+                        }
+
+                    </div>
+
+
+                    <div class="item-actions">
+
+                        <button
+                            class="item-action"
+                            data-action="edit-deadline"
+                            data-id="${deadline.id}"
+                            type="button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            class="item-action"
+                            data-action="delete-deadline"
+                            data-id="${deadline.id}"
+                            type="button"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                </div>
+            `;
+        }).join("");
+}
+
+
+function addDeadline(existing = null) {
+
+    openModal(
+        existing
+            ? "Edit Deadline"
+            : "Add Deadline",
+
+        [
+            {
+                id: "title",
+                label: "Deadline",
+                type: "text",
+                value: existing?.title || "",
+                required: true,
+                placeholder: "e.g. Performance Task"
+            },
+
+            {
+                id: "date",
+                label: "Date",
+                type: "date",
+                value: existing?.date || "",
+                required: true
+            },
+
+            {
+                id: "description",
+                label: "Details",
+                type: "textarea",
+                value:
+                    existing?.description || "",
+                placeholder: "Optional"
+            }
+        ],
+
+        values => {
+
+            if (existing) {
+
+                existing.title =
+                    values.title.trim();
+
+                existing.date =
+                    values.date;
+
+                existing.description =
+                    values.description.trim();
+
+            } else {
+
+                data.deadlines.push({
+
+                    id: createId("deadline"),
+
+                    title:
+                        values.title.trim(),
+
+                    date:
+                        values.date,
+
+                    description:
+                        values.description.trim(),
+
+                    createdAt:
+                        new Date().toISOString()
+                });
+            }
+
+
+            saveData();
+
+            renderAll();
+
+            showToast(
+                existing
+                    ? "Deadline updated"
+                    : "Deadline added"
+            );
+        }
+    );
+}
+
+
+/* =========================================
+   CLASS SCHEDULE
+========================================= */
+
+const WEEK_DAYS = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+];
+
+
+function dayNumber(day) {
+    const index =
+        WEEK_DAYS.indexOf(day);
+
+    return index === -1
+        ? 99
+        : index;
+}
+
+
+function renderSchedule() {
+
+    const list =
+        document.getElementById(
+            "scheduleList"
+        );
+
+    const todayContainer =
+        document.getElementById(
+            "todayClasses"
+        );
+
+
+    if (!list) {
+        return;
+    }
+
+
+    const schedules =
+        [...data.schedule]
+            .sort(
+                (a, b) => {
+
+                    const dayDifference =
+                        dayNumber(a.day) -
+                        dayNumber(b.day);
+
+                    if (dayDifference !== 0) {
+                        return dayDifference;
+                    }
+
+                    return (a.startTime || "")
+                        .localeCompare(
+                            b.startTime || ""
+                        );
+                }
+            );
+
+
+    const todayName =
+        new Date().toLocaleDateString(
+            "en-US",
+            {
+                weekday: "long"
+            }
+        );
+
+
+    const today =
+        schedules.filter(
+            item => item.day === todayName
+        );
+
+
+    if (todayContainer) {
+
+        if (today.length === 0) {
+
+            todayContainer.innerHTML = `
+                <div class="empty-state">
+                    No classes scheduled today.
                 </div>
             `;
 
-            return;
-        }
+        } else {
 
-        container.innerHTML = notes
-            .map(note => {
-                const folder = data.folders.find(
-                    folder => folder.id === note.folderId
-                );
+            todayContainer.innerHTML = `
+                <div class="today-class">
 
-                return `
-                    <div class="note-card ${note.pinned ? "pinned" : ""}">
-                        <div class="note-main">
-                            <div class="note-heading">
-                                <h3>${escapeHTML(note.title || "Untitled")}</h3>
+                    <div class="today-class-label">
+                        TODAY · ${escapeHTML(
+                            todayName
+                        )}
+                    </div>
+
+                    ${today.map(item => `
+                        <div style="margin-top:8px;">
+
+                            <strong>
+                                ${escapeHTML(
+                                    item.subject
+                                )}
+                            </strong>
+
+                            <div class="item-meta">
+                                ${escapeHTML(
+                                    formatTimeRange(
+                                        item.startTime,
+                                        item.endTime
+                                    )
+                                )}
 
                                 ${
-                                    note.pinned
-                                        ? `<span class="pin-label">Pinned</span>`
+                                    item.teacher
+                                        ? ` · ${escapeHTML(item.teacher)}`
                                         : ""
                                 }
                             </div>
 
+                        </div>
+                    `).join("")}
+
+                </div>
+            `;
+        }
+    }
+
+
+    if (schedules.length === 0) {
+
+        list.innerHTML = `
+            <div class="empty-state">
+                No classes added yet.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    list.innerHTML =
+        schedules.map(item => {
+
+            const isToday =
+                item.day === todayName;
+
+
+            return `
+                <div
+                    class="
+                        schedule-item
+                        ${isToday ? "today" : ""}
+                    "
+                    data-search="${escapeHTML(
+                        `${item.day} ${item.subject} ${item.teacher || ""}`
+                    )}"
+                >
+
+                    <div>
+                        <div class="schedule-day">
+                            ${escapeHTML(
+                                item.day
+                            )}
+                        </div>
+
+                        <div class="schedule-time">
+                            ${escapeHTML(
+                                formatTimeRange(
+                                    item.startTime,
+                                    item.endTime
+                                )
+                            )}
+                        </div>
+                    </div>
+
+
+                    <div class="item-main">
+
+                        <div class="schedule-subject">
+                            ${escapeHTML(
+                                item.subject
+                            )}
+                        </div>
+
+                        ${
+                            item.teacher
+                                ? `
+                                    <div class="schedule-teacher">
+                                        ${escapeHTML(
+                                            item.teacher
+                                        )}
+                                    </div>
+                                `
+                                : ""
+                        }
+
+                    </div>
+
+
+                    <div class="item-actions">
+
+                        <button
+                            class="item-action"
+                            data-action="edit-schedule"
+                            data-id="${item.id}"
+                            type="button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            class="item-action"
+                            data-action="delete-schedule"
+                            data-id="${item.id}"
+                            type="button"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                </div>
+            `;
+        }).join("");
+}
+
+
+function formatTime(time) {
+
+    if (!time) {
+        return "";
+    }
+
+    const parts =
+        time.split(":");
+
+    let hour =
+        Number(parts[0]);
+
+    const minute =
+        parts[1] || "00";
+
+    const suffix =
+        hour >= 12
+            ? "PM"
+            : "AM";
+
+    hour =
+        hour % 12 || 12;
+
+    return `${hour}:${minute} ${suffix}`;
+}
+
+
+function formatTimeRange(
+    start,
+    end
+) {
+
+    if (!start && !end) {
+        return "Time not set";
+    }
+
+    return `${formatTime(start)} - ${formatTime(end)}`;
+}
+
+
+function addSchedule(existing = null) {
+
+    openModal(
+        existing
+            ? "Edit Class"
+            : "Add Class",
+
+        [
+            {
+                id: "day",
+                label: "Day",
+                type: "select",
+                value:
+                    existing?.day ||
+                    "Monday",
+                required: true,
+                options:
+                    WEEK_DAYS.map(day => ({
+                        value: day,
+                        label: day
+                    }))
+            },
+
+            {
+                id: "subject",
+                label: "Subject",
+                type: "text",
+                value:
+                    existing?.subject || "",
+                required: true,
+                placeholder: "e.g. General Mathematics"
+            },
+
+            {
+                id: "teacher",
+                label: "Teacher",
+                type: "text",
+                value:
+                    existing?.teacher || "",
+                placeholder: "Teacher name"
+            },
+
+            {
+                id: "startTime",
+                label: "Start time",
+                type: "time",
+                value:
+                    existing?.startTime || "",
+                required: true
+            },
+
+            {
+                id: "endTime",
+                label: "End time",
+                type: "time",
+                value:
+                    existing?.endTime || "",
+                required: true
+            }
+        ],
+
+        values => {
+
+            if (existing) {
+
+                Object.assign(
+                    existing,
+                    {
+                        day:
+                            values.day,
+
+                        subject:
+                            values.subject.trim(),
+
+                        teacher:
+                            values.teacher.trim(),
+
+                        startTime:
+                            values.startTime,
+
+                        endTime:
+                            values.endTime
+                    }
+                );
+
+            } else {
+
+                data.schedule.push({
+
+                    id:
+                        createId("schedule"),
+
+                    day:
+                        values.day,
+
+                    subject:
+                        values.subject.trim(),
+
+                    teacher:
+                        values.teacher.trim(),
+
+                    startTime:
+                        values.startTime,
+
+                    endTime:
+                        values.endTime,
+
+                    createdAt:
+                        new Date().toISOString()
+                });
+            }
+
+
+            saveData();
+
+            renderAll();
+
+            showToast(
+                existing
+                    ? "Class updated"
+                    : "Class added"
+            );
+        }
+    );
+}
+
+
+/* =========================================
+   NOTES
+========================================= */
+
+function renderFolderOptions() {
+
+    const select =
+        document.getElementById(
+            "notesFolderFilter"
+        );
+
+    if (!select) {
+        return;
+    }
+
+
+    const current =
+        select.value || "all";
+
+
+    select.innerHTML = `
+        <option value="all">
+            All folders
+        </option>
+
+        ${data.folders.map(folder => `
+            <option value="${folder.id}">
+                ${escapeHTML(folder.name)}
+            </option>
+        `).join("")}
+    `;
+
+
+    if (
+        data.folders.some(
+            folder => folder.id === current
+        )
+    ) {
+        select.value = current;
+    } else {
+        select.value = "all";
+    }
+}
+
+
+function renderNotes() {
+
+    renderFolderOptions();
+
+
+    const container =
+        document.getElementById(
+            "notesList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    const folderFilter =
+        document.getElementById(
+            "notesFolderFilter"
+        )?.value || "all";
+
+
+    const sort =
+        document.getElementById(
+            "notesSort"
+        )?.value || "updated";
+
+
+    let notes =
+        [...data.notes];
+
+
+    if (folderFilter !== "all") {
+
+        notes =
+            notes.filter(
+                note =>
+                    (note.folderId ||
+                        "folder-unfiled") ===
+                    folderFilter
+            );
+    }
+
+
+    notes.sort(
+        (a, b) => {
+
+            if (sort === "az") {
+
+                return a.title
+                    .localeCompare(
+                        b.title
+                    );
+            }
+
+
+            if (sort === "za") {
+
+                return b.title
+                    .localeCompare(
+                        a.title
+                    );
+            }
+
+
+            if (sort === "pinned") {
+
+                if (
+                    Boolean(a.pinned) !==
+                    Boolean(b.pinned)
+                ) {
+                    return a.pinned
+                        ? -1
+                        : 1;
+                }
+            }
+
+
+            if (sort === "created") {
+
+                return (
+                    new Date(b.createdAt || 0) -
+                    new Date(a.createdAt || 0)
+                );
+            }
+
+
+            return (
+                new Date(
+                    b.updatedAt ||
+                    b.createdAt ||
+                    0
+                ) -
+                new Date(
+                    a.updatedAt ||
+                    a.createdAt ||
+                    0
+                )
+            );
+        }
+    );
+
+
+    if (notes.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                No notes found.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML =
+        notes.map(note => {
+
+            return `
+                <div
+                    class="item note-item"
+                    data-search="${escapeHTML(
+                        `${note.title} ${note.content || ""} ${getFolderName(note.folderId)}`
+                    )}"
+                >
+
+                    <div class="item-main">
+
+                        <div class="item-title">
+
                             ${
-                                note.content
-                                    ? `<p>${escapeHTML(
-                                          note.content
-                                      ).slice(0, 180)}${
-                                          note.content.length > 180
-                                              ? "..."
-                                              : ""
-                                      }</p>`
-                                    : `<p class="muted">No content</p>`
+                                note.pinned
+                                    ? `
+                                        <span class="note-pin">
+                                            📌
+                                        </span>
+                                    `
+                                    : ""
                             }
 
-                            <div class="note-meta">
-                                <span>
-                                    ${escapeHTML(
-                                        folder?.name || "Unfiled"
-                                    )}
-                                </span>
+                            ${escapeHTML(
+                                note.title
+                            )}
 
-                                <span>
-                                    ${formatDate(
-                                        (
-                                            note.updatedAt ||
-                                            note.createdAt ||
-                                            ""
-                                        ).slice(0, 10)
-                                    )}
-                                </span>
-                            </div>
                         </div>
 
-                        <div class="card-actions">
-                            <button
-                                class="icon-button"
-                                data-action="pin-note"
-                                data-id="${note.id}"
-                                title="${note.pinned ? "Unpin" : "Pin"}"
-                            >📌</button>
 
-                            <button
-                                class="icon-button"
-                                data-action="edit-note"
-                                data-id="${note.id}"
-                                title="Edit"
-                            >✎</button>
+                        ${
+                            note.content
+                                ? `
+                                    <div class="note-content">
+                                        ${escapeHTML(
+                                            note.content
+                                        )}
+                                    </div>
+                                `
+                                : ""
+                        }
 
-                            <button
-                                class="icon-button danger"
-                                data-action="delete-note"
-                                data-id="${note.id}"
-                                title="Delete"
-                            >×</button>
-                        </div>
+
+                        <span class="folder-label">
+                            ${escapeHTML(
+                                getFolderName(
+                                    note.folderId
+                                )
+                            )}
+                        </span>
+
                     </div>
-                `;
-            })
-            .join("");
-    }
 
-    function setupNotes() {
-        $("#notesFolderFilter")?.addEventListener("change", event => {
-            selectedFolder = event.target.value;
-            renderNotes();
-        });
 
-        $("#notesSort")?.addEventListener("change", event => {
-            notesSort = event.target.value;
-            renderNotes();
-        });
-    }
+                    <div class="item-actions">
 
-    /* =========================================================
-       LINKS
-       ========================================================= */
-
-    function renderLinks() {
-        const container = $("#linksList");
-
-        if (!container) return;
-
-        if (!data.links.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">🔗</div>
-                    <p>No school resources yet.</p>
-                    <button
-                        class="small-button"
-                        data-action="add-link"
-                    >
-                        Add a link
-                    </button>
-                </div>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = data.links
-            .map(link => `
-                <div class="link-card">
-                    <div class="link-info">
-                        <h3>${escapeHTML(link.name)}</h3>
-                        <a
-                            href="${escapeHTML(link.url)}"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <button
+                            class="item-action"
+                            data-action="pin-note"
+                            data-id="${note.id}"
+                            type="button"
+                            title="Pin"
                         >
-                            ${escapeHTML(link.url)}
-                        </a>
-                    </div>
-
-                    <div class="card-actions">
-                        <button
-                            class="icon-button"
-                            data-action="edit-link"
-                            data-id="${link.id}"
-                        >✎</button>
+                            ${note.pinned ? "Unpin" : "Pin"}
+                        </button>
 
                         <button
-                            class="icon-button danger"
-                            data-action="delete-link"
-                            data-id="${link.id}"
-                        >×</button>
+                            class="item-action"
+                            data-action="edit-note"
+                            data-id="${note.id}"
+                            type="button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            class="item-action"
+                            data-action="delete-note"
+                            data-id="${note.id}"
+                            type="button"
+                        >
+                            ×
+                        </button>
+
                     </div>
+
                 </div>
-            `)
-            .join("");
-    }
-
-    /* =========================================================
-       STATS / PROGRESS
-       ========================================================= */
-
-    function renderStats() {
-        const totalTasks = data.tasks.length;
-        const completedTasks = data.tasks.filter(
-            task => task.completed
-        ).length;
-
-        const activeTasks = totalTasks - completedTasks;
-
-        const statTasks = $("#statTasks");
-        const statSubjects = $("#statSubjects");
-        const statDeadlines = $("#statDeadlines");
-        const statProgress = $("#statProgress");
-
-        if (statTasks) {
-            statTasks.textContent = activeTasks;
-        }
-
-        if (statSubjects) {
-            statSubjects.textContent = data.subjects.length;
-        }
-
-        if (statDeadlines) {
-            statDeadlines.textContent = data.deadlines.length;
-        }
-
-        if (statProgress) {
-            const percent = totalTasks
-                ? Math.round(
-                      (completedTasks / totalTasks) * 100
-                  )
-                : 0;
-
-            statProgress.textContent = `${percent}%`;
-        }
-
-        const progressBar = $("#progressBar");
-
-        if (progressBar) {
-            const percent = totalTasks
-                ? Math.round(
-                      (completedTasks / totalTasks) * 100
-                  )
-                : 0;
-
-            progressBar.style.width = `${percent}%`;
-        }
-    }
-
-    /* =========================================================
-       MODAL
-       ========================================================= */
-
-    const modalOverlay = $("#modalOverlay");
-    const modalTitle = $("#modalTitle");
-    const modalFields = $("#modalFields");
-    const modalForm = $("#modalForm");
-
-    let modalSubmitHandler = null;
-
-    function openModal(title, fields, submitHandler) {
-        if (!modalOverlay || !modalFields || !modalTitle) return;
-
-        modalTitle.textContent = title;
-
-        modalFields.innerHTML = fields
-            .map(fieldHTML)
-            .join("");
-
-        modalSubmitHandler = submitHandler;
-
-        modalOverlay.classList.add("open");
-
-        setTimeout(() => {
-            modalFields.querySelector("input, textarea, select")?.focus();
-        }, 50);
-    }
-
-    function fieldHTML(field) {
-        const required = field.required ? "required" : "";
-
-        if (field.type === "textarea") {
-            return `
-                <label class="form-field">
-                    <span>${escapeHTML(field.label)}</span>
-                    <textarea
-                        name="${escapeHTML(field.name)}"
-                        placeholder="${escapeHTML(field.placeholder || "")}"
-                        ${required}
-                    >${escapeHTML(field.value || "")}</textarea>
-                </label>
             `;
+        }).join("");
+}
+
+
+function noteFields(existing = null) {
+
+    return [
+
+        {
+            id: "title",
+            label: "Note title",
+            type: "text",
+            value:
+                existing?.title || "",
+            required: true,
+            placeholder: "Note title"
+        },
+
+        {
+            id: "content",
+            label: "Note",
+            type: "textarea",
+            value:
+                existing?.content || "",
+            placeholder:
+                "Write your note here..."
+        },
+
+        {
+            id: "folderId",
+            label: "Folder",
+            type: "select",
+            value:
+                existing?.folderId ||
+                "folder-unfiled",
+
+            options:
+                data.folders.map(folder => ({
+                    value: folder.id,
+                    label: folder.name
+                }))
         }
 
-        if (field.type === "select") {
-            return `
-                <label class="form-field">
-                    <span>${escapeHTML(field.label)}</span>
-
-                    <select
-                        name="${escapeHTML(field.name)}"
-                        ${required}
-                    >
-                        ${field.options
-                            .map(option => `
-                                <option
-                                    value="${escapeHTML(option.value)}"
-                                    ${
-                                        option.value === field.value
-                                            ? "selected"
-                                            : ""
-                                    }
-                                >
-                                    ${escapeHTML(option.label)}
-                                </option>
-                            `)
-                            .join("")}
-                    </select>
-                </label>
-            `;
-        }
-
-        return `
-            <label class="form-field">
-                <span>${escapeHTML(field.label)}</span>
-
-                <input
-                    type="${escapeHTML(field.type || "text")}"
-                    name="${escapeHTML(field.name)}"
-                    value="${escapeHTML(field.value || "")}"
-                    placeholder="${escapeHTML(field.placeholder || "")}"
-                    ${required}
-                />
-            </label>
-        `;
-    }
-
-    function closeModal() {
-        modalOverlay?.classList.remove("open");
-        modalSubmitHandler = null;
-    }
-
-    modalForm?.addEventListener("submit", event => {
-        event.preventDefault();
-
-        if (!modalSubmitHandler) return;
-
-        const formData = new FormData(modalForm);
-        const values = Object.fromEntries(formData.entries());
-
-        modalSubmitHandler(values);
-        closeModal();
-    });
-
-    modalOverlay?.addEventListener("click", event => {
-        if (event.target === modalOverlay) {
-            closeModal();
-        }
-    });
-
-    /* =========================================================
-       SUBJECT MODALS
-       ========================================================= */
-
-    function addSubject() {
-        openModal(
-            "Add Subject",
-            [
-                {
-                    name: "name",
-                    label: "Subject name",
-                    placeholder: "e.g. General Mathematics",
-                    required: true
-                },
-                {
-                    name: "color",
-                    label: "Color",
-                    type: "color",
-                    value: "#b99acb"
-                }
-            ],
-            values => {
-                data.subjects.push({
-                    id: generateId("subject"),
-                    name: values.name.trim(),
-                    color: values.color || "#b99acb",
-                    createdAt: new Date().toISOString()
-                });
-
-                saveData();
-                renderAll();
-
-                showToast("Subject added.");
-            }
-        );
-    }
-
-    function editSubject(id) {
-        const subject = data.subjects.find(
-            item => item.id === id
-        );
-
-        if (!subject) return;
-
-        openModal(
-            "Edit Subject",
-            [
-                {
-                    name: "name",
-                    label: "Subject name",
-                    value: subject.name,
-                    required: true
-                },
-                {
-                    name: "color",
-                    label: "Color",
-                    type: "color",
-                    value: subject.color || "#b99acb"
-                }
-            ],
-            values => {
-                subject.name = values.name.trim();
-                subject.color = values.color;
-
-                saveData();
-                renderAll();
-
-                showToast("Subject updated.");
-            }
-        );
-    }
-
-    /* =========================================================
-       TASK MODALS
-       ========================================================= */
-
-    function addTask() {
-        openModal(
-            "Add Task",
-            [
-                {
-                    name: "title",
-                    label: "Task",
-                    placeholder: "What do you need to do?",
-                    required: true
-                },
-                {
-                    name: "description",
-                    label: "Description",
-                    type: "textarea",
-                    placeholder: "Optional"
-                },
-                {
-                    name: "subjectId",
-                    label: "Subject",
-                    type: "select",
-                    value: "",
-                    options: [
-                        {
-                            value: "",
-                            label: "No subject"
-                        },
-                        ...data.subjects.map(subject => ({
-                            value: subject.id,
-                            label: subject.name
-                        }))
-                    ]
-                },
-                {
-                    name: "dueDate",
-                    label: "Due date",
-                    type: "date"
-                },
-                {
-                    name: "priority",
-                    label: "Priority",
-                    type: "select",
-                    value: "medium",
-                    options: [
-                        {
-                            value: "low",
-                            label: "Low"
-                        },
-                        {
-                            value: "medium",
-                            label: "Medium"
-                        },
-                        {
-                            value: "high",
-                            label: "High"
-                        }
-                    ]
-                }
-            ],
-            values => {
-                data.tasks.push({
-                    id: generateId("task"),
-                    title: values.title.trim(),
-                    description: values.description.trim(),
-                    subjectId: values.subjectId || null,
-                    dueDate: values.dueDate || null,
-                    priority: values.priority || "medium",
-                    completed: false,
-                    createdAt: new Date().toISOString()
-                });
-
-                saveData();
-                renderAll();
-
-                showToast("Task added.");
-            }
-        );
-    }
-
-    function editTask(id) {
-        const task = data.tasks.find(
-            item => item.id === id
-        );
-
-        if (!task) return;
-
-        openModal(
-            "Edit Task",
-            [
-                {
-                    name: "title",
-                    label: "Task",
-                    value: task.title,
-                    required: true
-                },
-                {
-                    name: "description",
-                    label: "Description",
-                    type: "textarea",
-                    value: task.description
-                },
-                {
-                    name: "subjectId",
-                    label: "Subject",
-                    type: "select",
-                    value: task.subjectId || "",
-                    options: [
-                        {
-                            value: "",
-                            label: "No subject"
-                        },
-                        ...data.subjects.map(subject => ({
-                            value: subject.id,
-                            label: subject.name
-                        }))
-                    ]
-                },
-                {
-                    name: "dueDate",
-                    label: "Due date",
-                    type: "date",
-                    value: task.dueDate || ""
-                },
-                {
-                    name: "priority",
-                    label: "Priority",
-                    type: "select",
-                    value: task.priority || "medium",
-                    options: [
-                        {
-                            value: "low",
-                            label: "Low"
-                        },
-                        {
-                            value: "medium",
-                            label: "Medium"
-                        },
-                        {
-                            value: "high",
-                            label: "High"
-                        }
-                    ]
-                }
-            ],
-            values => {
-                task.title = values.title.trim();
-                task.description = values.description.trim();
-                task.subjectId = values.subjectId || null;
-                task.dueDate = values.dueDate || null;
-                task.priority = values.priority || "medium";
-
-                saveData();
-                renderAll();
-
-                showToast("Task updated.");
-            }
-        );
-    }
-
-    /* =========================================================
-       DEADLINE MODALS
-       ========================================================= */
-
-    function addDeadline() {
-        openModal(
-            "Add Deadline",
-            [
-                {
-                    name: "title",
-                    label: "Deadline",
-                    placeholder: "e.g. Research Paper",
-                    required: true
-                },
-                {
-                    name: "description",
-                    label: "Details",
-                    type: "textarea"
-                },
-                {
-                    name: "date",
-                    label: "Date",
-                    type: "date",
-                    required: true
-                }
-            ],
-            values => {
-                data.deadlines.push({
-                    id: generateId("deadline"),
-                    title: values.title.trim(),
-                    description: values.description.trim(),
-                    date: values.date,
-                    createdAt: new Date().toISOString()
-                });
-
-                saveData();
-                renderAll();
-
-                showToast("Deadline added.");
-            }
-        );
-    }
-
-    function editDeadline(id) {
-        const deadline = data.deadlines.find(
-            item => item.id === id
-        );
-
-        if (!deadline) return;
-
-        openModal(
-            "Edit Deadline",
-            [
-                {
-                    name: "title",
-                    label: "Deadline",
-                    value: deadline.title,
-                    required: true
-                },
-                {
-                    name: "description",
-                    label: "Details",
-                    type: "textarea",
-                    value: deadline.description
-                },
-                {
-                    name: "date",
-                    label: "Date",
-                    type: "date",
-                    value: deadline.date,
-                    required: true
-                }
-            ],
-            values => {
-                deadline.title = values.title.trim();
-                deadline.description = values.description.trim();
-                deadline.date = values.date;
-
-                saveData();
-                renderAll();
-
-                showToast("Deadline updated.");
-            }
-        );
-    }
-
-    /* =========================================================
-       SCHEDULE MODALS
-       ========================================================= */
-
-    const days = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday"
     ];
+}
 
-    function addSchedule() {
-        openModal(
-            "Add Class",
-            [
-                {
-                    name: "day",
-                    label: "Day",
-                    type: "select",
-                    value: "Monday",
-                    options: days.map(day => ({
-                        value: day,
-                        label: day
-                    }))
-                },
-                {
-                    name: "subject",
-                    label: "Subject",
-                    placeholder: "e.g. General Mathematics",
-                    required: true
-                },
-                {
-                    name: "teacher",
-                    label: "Teacher",
-                    placeholder: "Teacher's name"
-                },
-                {
-                    name: "startTime",
-                    label: "Start time",
-                    type: "time",
-                    required: true
-                },
-                {
-                    name: "endTime",
-                    label: "End time",
-                    type: "time",
-                    required: true
-                }
-            ],
-            values => {
-                data.schedule.push({
-                    id: generateId("schedule"),
-                    day: values.day,
-                    subject: values.subject.trim(),
-                    teacher: values.teacher.trim(),
-                    startTime: values.startTime,
-                    endTime: values.endTime,
-                    createdAt: new Date().toISOString()
-                });
 
-                saveData();
-                renderAll();
+function addNote(existing = null) {
 
-                showToast("Class added.");
-            }
-        );
-    }
+    openModal(
+        existing
+            ? "Edit Note"
+            : "Add Note",
 
-    function editSchedule(id) {
-        const item = data.schedule.find(
-            schedule => schedule.id === id
-        );
+        noteFields(existing),
 
-        if (!item) return;
+        values => {
 
-        openModal(
-            "Edit Class",
-            [
-                {
-                    name: "day",
-                    label: "Day",
-                    type: "select",
-                    value: item.day,
-                    options: days.map(day => ({
-                        value: day,
-                        label: day
-                    }))
-                },
-                {
-                    name: "subject",
-                    label: "Subject",
-                    value: item.subject,
-                    required: true
-                },
-                {
-                    name: "teacher",
-                    label: "Teacher",
-                    value: item.teacher
-                },
-                {
-                    name: "startTime",
-                    label: "Start time",
-                    type: "time",
-                    value: item.startTime,
-                    required: true
-                },
-                {
-                    name: "endTime",
-                    label: "End time",
-                    type: "time",
-                    value: item.endTime,
-                    required: true
-                }
-            ],
-            values => {
-                item.day = values.day;
-                item.subject = values.subject.trim();
-                item.teacher = values.teacher.trim();
-                item.startTime = values.startTime;
-                item.endTime = values.endTime;
+            if (existing) {
 
-                saveData();
-                renderAll();
+                existing.title =
+                    values.title.trim();
 
-                showToast("Class updated.");
-            }
-        );
-    }
+                existing.content =
+                    values.content.trim();
 
-    /* =========================================================
-       NOTES MODALS
-       ========================================================= */
+                existing.folderId =
+                    values.folderId;
 
-    function addNote() {
-        openModal(
-            "New Note",
-            [
-                {
-                    name: "title",
-                    label: "Title",
-                    placeholder: "Note title",
-                    required: true
-                },
-                {
-                    name: "folderId",
-                    label: "Folder",
-                    type: "select",
-                    value: "unfiled",
-                    options: data.folders.map(folder => ({
-                        value: folder.id,
-                        label: folder.name
-                    }))
-                },
-                {
-                    name: "content",
-                    label: "Note",
-                    type: "textarea",
-                    placeholder: "Write something..."
-                }
-            ],
-            values => {
-                const now = new Date().toISOString();
+                existing.updatedAt =
+                    new Date().toISOString();
+
+            } else {
 
                 data.notes.push({
-                    id: generateId("note"),
-                    title: values.title.trim(),
-                    content: values.content.trim(),
-                    folderId: values.folderId || "unfiled",
+
+                    id:
+                        createId("note"),
+
+                    title:
+                        values.title.trim(),
+
+                    content:
+                        values.content.trim(),
+
+                    folderId:
+                        values.folderId ||
+                        "folder-unfiled",
+
                     pinned: false,
-                    createdAt: now,
-                    updatedAt: now
+
+                    createdAt:
+                        new Date().toISOString(),
+
+                    updatedAt:
+                        new Date().toISOString()
                 });
-
-                saveData();
-                renderAll();
-
-                showToast("Note created.");
             }
-        );
-    }
 
-    function editNote(id) {
-        const note = data.notes.find(
-            item => item.id === id
-        );
 
-        if (!note) return;
+            saveData();
 
-        openModal(
-            "Edit Note",
-            [
-                {
-                    name: "title",
-                    label: "Title",
-                    value: note.title,
-                    required: true
-                },
-                {
-                    name: "folderId",
-                    label: "Folder",
-                    type: "select",
-                    value: note.folderId || "unfiled",
-                    options: data.folders.map(folder => ({
-                        value: folder.id,
-                        label: folder.name
-                    }))
-                },
-                {
-                    name: "content",
-                    label: "Note",
-                    type: "textarea",
-                    value: note.content
-                }
-            ],
-            values => {
-                note.title = values.title.trim();
-                note.content = values.content.trim();
-                note.folderId = values.folderId || "unfiled";
-                note.updatedAt = new Date().toISOString();
+            renderAll();
 
-                saveData();
-                renderAll();
+            showToast(
+                existing
+                    ? "Note updated"
+                    : "Note added"
+            );
+        }
+    );
+}
 
-                showToast("Note updated.");
+
+function addFolder() {
+
+    openModal(
+        "Add Folder",
+
+        [
+            {
+                id: "name",
+                label: "Folder name",
+                type: "text",
+                required: true,
+                placeholder: "e.g. Modules"
             }
-        );
-    }
+        ],
 
-    /* =========================================================
-       FOLDERS
-       ========================================================= */
+        values => {
 
-    function addFolder() {
-        openModal(
-            "New Folder",
-            [
-                {
-                    name: "name",
-                    label: "Folder name",
-                    placeholder: "e.g. School",
-                    required: true
-                }
-            ],
-            values => {
-                const name = values.name.trim();
+            const name =
+                values.name.trim();
 
-                if (!name) return;
+            if (!name) {
+                return;
+            }
 
-                const exists = data.folders.some(
+
+            const exists =
+                data.folders.some(
                     folder =>
-                        folder.name.toLowerCase() ===
+                        folder.name
+                            .toLowerCase() ===
                         name.toLowerCase()
                 );
 
-                if (exists) {
-                    showToast("That folder already exists.");
-                    return;
-                }
 
-                data.folders.push({
-                    id: generateId("folder"),
-                    name
-                });
+            if (exists) {
 
-                saveData();
-                renderAll();
+                showToast(
+                    "That folder already exists"
+                );
 
-                showToast("Folder created.");
+                return;
             }
-        );
-    }
 
-    function manageFolders() {
-        if (data.folders.length <= 1) {
-            showToast("You don't have any custom folders yet.");
-            return;
+
+            data.folders.push({
+
+                id:
+                    createId("folder"),
+
+                name
+            });
+
+
+            saveData();
+
+            renderNotes();
+
+            showToast(
+                "Folder added"
+            );
         }
+    );
+}
 
-        openModal(
-            "Manage Folders",
-            data.folders
-                .filter(folder => folder.id !== "unfiled")
-                .map(folder => ({
-                    name: `folder_${folder.id}`,
-                    label: folder.name,
-                    value: folder.name
-                })),
-            values => {
-                let changed = false;
 
-                data.folders.forEach(folder => {
-                    if (folder.id === "unfiled") return;
+function manageFolders() {
 
-                    const newName = values[`folder_${folder.id}`]?.trim();
-
-                    if (newName && newName !== folder.name) {
-                        folder.name = newName;
-                        changed = true;
-                    }
-                });
-
-                if (changed) {
-                    saveData();
-                    renderAll();
-                    showToast("Folders updated.");
-                }
-            }
+    const removable =
+        data.folders.filter(
+            folder =>
+                folder.id !==
+                "folder-unfiled"
         );
+
+
+    if (removable.length === 0) {
+
+        showToast(
+            "No custom folders yet"
+        );
+
+        return;
     }
 
-    /* =========================================================
-       LINKS
-       ========================================================= */
 
-    function addLink() {
-        openModal(
-            "Add School Resource",
-            [
-                {
-                    name: "name",
-                    label: "Name",
-                    placeholder: "e.g. Google Classroom",
-                    required: true
-                },
-                {
-                    name: "url",
-                    label: "URL",
-                    placeholder: "https://...",
-                    required: true
-                }
-            ],
-            values => {
-                let url = values.url.trim();
+    const options =
+        removable.map(
+            folder =>
+                `${folder.name}`
+        ).join("\n");
 
-                if (
-                    url &&
-                    !url.startsWith("http://") &&
-                    !url.startsWith("https://")
-                ) {
-                    url = "https://" + url;
-                }
 
-                data.links.push({
-                    id: generateId("link"),
-                    name: values.name.trim(),
-                    url,
-                    createdAt: new Date().toISOString()
-                });
-
-                saveData();
-                renderAll();
-
-                showToast("Link added.");
-            }
+    const answer =
+        prompt(
+            `Custom folders:\n\n${options}\n\nType the exact folder name to delete it.`
         );
+
+
+    if (!answer) {
+        return;
     }
 
-    function editLink(id) {
-        const link = data.links.find(
-            item => item.id === id
+
+    const folder =
+        removable.find(
+            item =>
+                item.name.toLowerCase() ===
+                answer.trim().toLowerCase()
         );
 
-        if (!link) return;
 
-        openModal(
-            "Edit School Resource",
-            [
-                {
-                    name: "name",
-                    label: "Name",
-                    value: link.name,
-                    required: true
-                },
-                {
-                    name: "url",
-                    label: "URL",
-                    value: link.url,
-                    required: true
-                }
-            ],
-            values => {
-                let url = values.url.trim();
+    if (!folder) {
 
-                if (
-                    url &&
-                    !url.startsWith("http://") &&
-                    !url.startsWith("https://")
-                ) {
-                    url = "https://" + url;
-                }
-
-                link.name = values.name.trim();
-                link.url = url;
-
-                saveData();
-                renderAll();
-
-                showToast("Link updated.");
-            }
+        showToast(
+            "Folder not found"
         );
+
+        return;
     }
 
-    /* =========================================================
-       TRASH
-       ========================================================= */
 
-    function moveToTrash(type, item) {
-        data.trash.unshift({
-            id: generateId("trash"),
-            type,
-            deletedAt: new Date().toISOString(),
-            original: structuredClone(item)
-        });
+    const confirmed =
+        confirm(
+            `Delete "${folder.name}"?\n\nNotes inside it will be moved to Unfiled.`
+        );
+
+
+    if (!confirmed) {
+        return;
     }
 
-    function restoreTrash(id) {
-        const trashItem = data.trash.find(
-            item => item.id === id
-        );
 
-        if (!trashItem) return;
+    data.notes.forEach(note => {
 
-        const targetMap = {
-            subject: data.subjects,
-            task: data.tasks,
-            deadline: data.deadlines,
-            schedule: data.schedule,
-            note: data.notes,
-            link: data.links
-        };
+        if (note.folderId === folder.id) {
 
-        const target = targetMap[trashItem.type];
-
-        if (!target) return;
-
-        const alreadyExists = target.some(
-            item => item.id === trashItem.original.id
-        );
-
-        if (!alreadyExists) {
-            target.push(trashItem.original);
+            note.folderId =
+                "folder-unfiled";
         }
+    });
 
-        data.trash = data.trash.filter(
-            item => item.id !== id
+
+    data.folders =
+        data.folders.filter(
+            item =>
+                item.id !== folder.id
         );
 
-        saveData();
-        renderAll();
 
-        showToast("Item restored.");
+    saveData();
+
+    renderAll();
+
+    showToast(
+        "Folder deleted"
+    );
+}
+
+
+/* =========================================
+   SCHOOL LINKS
+========================================= */
+
+function renderLinks() {
+
+    const container =
+        document.getElementById(
+            "linksList"
+        );
+
+    if (!container) {
+        return;
     }
 
-    function permanentlyDeleteTrash(id) {
-        const item = data.trash.find(
-            trash => trash.id === id
-        );
 
-        if (!item) return;
+    if (data.links.length === 0) {
 
-        data.trash = data.trash.filter(
-            trash => trash.id !== id
-        );
+        container.innerHTML = `
+            <div class="empty-state">
+                No school links yet.
+            </div>
+        `;
 
-        saveData();
-        renderTrash();
-
-        showToast("Permanently deleted.");
+        return;
     }
 
-    function emptyTrash() {
-        if (!data.trash.length) {
-            showToast("Trash is already empty.");
-            return;
-        }
 
-        const confirmed = confirm(
-            "Permanently delete everything in Trash?"
-        );
+    container.innerHTML =
+        data.links.map(link => {
 
-        if (!confirmed) return;
+            return `
+                <div
+                    class="item link-item"
+                    data-search="${escapeHTML(
+                        `${link.name} ${link.url}`
+                    )}"
+                >
 
-        data.trash = [];
+                    <div class="link-icon">
+                        🔗
+                    </div>
 
-        saveData();
-        renderTrash();
 
-        showToast("Trash emptied.");
-    }
+                    <div class="item-main">
 
-    function renderTrash() {
-        const container = $("#trashList");
+                        <div class="item-title">
+                            ${escapeHTML(
+                                link.name
+                            )}
+                        </div>
 
-        if (!container) return;
+                        <div class="link-url">
+                            ${escapeHTML(
+                                link.url
+                            )}
+                        </div>
 
-        if (!data.trash.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">🗑️</div>
-                    <p>Trash is empty.</p>
+                    </div>
+
+
+                    <div class="item-actions">
+
+                        <a
+                            class="item-action link-open"
+                            href="${escapeHTML(
+                                normalizeURL(
+                                    link.url
+                                )
+                            )}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Open
+                        </a>
+
+                        <button
+                            class="item-action"
+                            data-action="edit-link"
+                            data-id="${link.id}"
+                            type="button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            class="item-action"
+                            data-action="delete-link"
+                            data-id="${link.id}"
+                            type="button"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
                 </div>
             `;
+        }).join("");
+}
 
-            return;
-        }
 
-        container.innerHTML = data.trash
-            .map(item => {
-                const typeName =
-                    item.type.charAt(0).toUpperCase() +
-                    item.type.slice(1);
+function normalizeURL(url) {
 
-                const title =
-                    item.original.title ||
-                    item.original.name ||
-                    item.original.subject ||
-                    "Deleted item";
-
-                return `
-                    <div class="trash-card">
-                        <div class="trash-info">
-                            <span class="trash-type">
-                                ${escapeHTML(typeName)}
-                            </span>
-
-                            <h3>${escapeHTML(title)}</h3>
-
-                            <p>
-                                Deleted
-                                ${new Date(
-                                    item.deletedAt
-                                ).toLocaleString("en-PH", {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                    hour: "numeric",
-                                    minute: "2-digit"
-                                })}
-                            </p>
-                        </div>
-
-                        <div class="card-actions">
-                            <button
-                                class="small-button"
-                                data-action="restore-trash"
-                                data-id="${item.id}"
-                            >
-                                Restore
-                            </button>
-
-                            <button
-                                class="icon-button danger"
-                                data-action="permanent-delete"
-                                data-id="${item.id}"
-                                title="Permanently delete"
-                            >
-                                ×
-                            </button>
-                        </div>
-                    </div>
-                `;
-            })
-            .join("");
+    if (
+        url.startsWith("http://") ||
+        url.startsWith("https://")
+    ) {
+        return url;
     }
 
-    /* =========================================================
-       DELETE FUNCTIONS
-       ========================================================= */
+    return `https://${url}`;
+}
 
-    function deleteItem(type, id) {
-        const map = {
-            subject: data.subjects,
-            task: data.tasks,
-            deadline: data.deadlines,
-            schedule: data.schedule,
-            note: data.notes,
-            link: data.links
-        };
 
-        const array = map[type];
+function addLink(existing = null) {
 
-        if (!array) return;
+    openModal(
+        existing
+            ? "Edit School Link"
+            : "Add School Link",
 
-        const index = array.findIndex(
+        [
+            {
+                id: "name",
+                label: "Name",
+                type: "text",
+                value:
+                    existing?.name || "",
+                required: true,
+                placeholder: "e.g. Google Classroom"
+            },
+
+            {
+                id: "url",
+                label: "URL",
+                type: "url",
+                value:
+                    existing?.url || "",
+                required: true,
+                placeholder: "https://..."
+            }
+        ],
+
+        values => {
+
+            if (existing) {
+
+                existing.name =
+                    values.name.trim();
+
+                existing.url =
+                    values.url.trim();
+
+            } else {
+
+                data.links.push({
+
+                    id:
+                        createId("link"),
+
+                    name:
+                        values.name.trim(),
+
+                    url:
+                        values.url.trim(),
+
+                    createdAt:
+                        new Date().toISOString()
+                });
+            }
+
+
+            saveData();
+
+            renderAll();
+
+            showToast(
+                existing
+                    ? "Link updated"
+                    : "Link added"
+            );
+        }
+    );
+}
+
+
+/* =========================================
+   TRASH
+========================================= */
+
+function moveToTrash(
+    type,
+    item
+) {
+
+    data.trash.push({
+
+        id:
+            createId("trash"),
+
+        originalId:
+            item.id,
+
+        type,
+
+        item:
+            structuredClone(item),
+
+        deletedAt:
+            new Date().toISOString()
+    });
+
+
+    saveData();
+}
+
+
+function renderTrash() {
+
+    const container =
+        document.getElementById(
+            "trashList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    if (data.trash.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                Trash is empty.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    const trash =
+        [...data.trash]
+            .sort(
+                (a, b) =>
+                    new Date(b.deletedAt) -
+                    new Date(a.deletedAt)
+            );
+
+
+    container.innerHTML =
+        trash.map(item => {
+
+            const title =
+                getTrashTitle(item);
+
+
+            return `
+                <div class="item trash-item">
+
+                    <div class="item-main">
+
+                        <div class="item-title">
+                            ${escapeHTML(title)}
+                        </div>
+
+                        <div class="item-meta">
+                            ${escapeHTML(
+                                capitalize(
+                                    item.type
+                                )
+                            )}
+                        </div>
+
+                        <div class="deleted-date">
+                            Deleted:
+                            ${formatDateTime(
+                                item.deletedAt
+                            )}
+                        </div>
+
+                    </div>
+
+
+                    <div class="item-actions">
+
+                        <button
+                            class="item-action"
+                            data-action="restore-trash"
+                            data-id="${item.id}"
+                            type="button"
+                        >
+                            Restore
+                        </button>
+
+                        <button
+                            class="item-action"
+                            data-action="permanent-trash"
+                            data-id="${item.id}"
+                            type="button"
+                        >
+                            Delete
+                        </button>
+
+                    </div>
+
+                </div>
+            `;
+        }).join("");
+}
+
+
+function getTrashTitle(item) {
+
+    if (!item.item) {
+        return "Deleted item";
+    }
+
+
+    return (
+        item.item.title ||
+        item.item.name ||
+        item.item.subject ||
+        "Deleted item"
+    );
+}
+
+
+function capitalize(value) {
+
+    return String(value)
+        .charAt(0)
+        .toUpperCase() +
+        String(value)
+            .slice(1);
+}
+
+
+function restoreTrash(id) {
+
+    const trashItem =
+        data.trash.find(
             item => item.id === id
         );
 
-        if (index === -1) return;
 
-        const item = array[index];
-
-        moveToTrash(type, item);
-
-        array.splice(index, 1);
-
-        saveData();
-        renderAll();
-
-        showToast("Moved to Trash.");
+    if (!trashItem) {
+        return;
     }
 
-    /* =========================================================
-       CALCULATOR
-       ========================================================= */
 
-    let calculatorExpression = "";
+    const collection =
+        getCollection(
+            trashItem.type
+        );
 
-    function updateCalculatorDisplay() {
-        const display = $("#calculatorDisplay");
 
-        if (!display) return;
+    if (!collection) {
+        return;
+    }
+
+
+    const alreadyExists =
+        collection.some(
+            item =>
+                item.id ===
+                trashItem.originalId
+        );
+
+
+    if (!alreadyExists) {
+
+        collection.push(
+            trashItem.item
+        );
+    }
+
+
+    data.trash =
+        data.trash.filter(
+            item =>
+                item.id !== id
+        );
+
+
+    saveData();
+
+    renderAll();
+
+    showToast(
+        "Item restored"
+    );
+}
+
+
+function permanentlyDeleteTrash(id) {
+
+    data.trash =
+        data.trash.filter(
+            item =>
+                item.id !== id
+        );
+
+
+    saveData();
+
+    renderTrash();
+
+    showToast(
+        "Permanently deleted"
+    );
+}
+
+
+function getCollection(type) {
+
+    const map = {
+
+        subject:
+            "subjects",
+
+        task:
+            "tasks",
+
+        deadline:
+            "deadlines",
+
+        schedule:
+            "schedule",
+
+        note:
+            "notes",
+
+        link:
+            "links"
+
+    };
+
+
+    const key = map[type];
+
+    return key
+        ? data[key]
+        : null;
+}
+
+
+/* =========================================
+   DELETE HELPERS
+========================================= */
+
+function deleteItem(
+    type,
+    id
+) {
+
+    const collection =
+        getCollection(type);
+
+
+    if (!collection) {
+        return;
+    }
+
+
+    const index =
+        collection.findIndex(
+            item => item.id === id
+        );
+
+
+    if (index === -1) {
+        return;
+    }
+
+
+    const item =
+        collection[index];
+
+
+    moveToTrash(
+        type,
+        item
+    );
+
+
+    collection.splice(
+        index,
+        1
+    );
+
+
+    saveData();
+
+    renderAll();
+
+    showToast(
+        "Moved to Trash"
+    );
+}
+
+
+/* =========================================
+   EVENT ACTIONS
+========================================= */
+
+function handleAction(
+    action,
+    id
+) {
+
+    if (action === "edit-subject") {
+
+        const item =
+            data.subjects.find(
+                subject => subject.id === id
+            );
+
+        if (item) {
+            addSubject(item);
+        }
+
+        return;
+    }
+
+
+    if (action === "delete-subject") {
+
+        if (
+            confirm(
+                "Move this subject to Trash?"
+            )
+        ) {
+            deleteItem(
+                "subject",
+                id
+            );
+        }
+
+        return;
+    }
+
+
+    if (action === "edit-task") {
+
+        const item =
+            data.tasks.find(
+                task => task.id === id
+            );
+
+        if (item) {
+            addTask(item);
+        }
+
+        return;
+    }
+
+
+    if (action === "delete-task") {
+
+        if (
+            confirm(
+                "Move this task to Trash?"
+            )
+        ) {
+            deleteItem(
+                "task",
+                id
+            );
+        }
+
+        return;
+    }
+
+
+    if (action === "toggle-task") {
+
+        const item =
+            data.tasks.find(
+                task => task.id === id
+            );
+
+        if (!item) {
+            return;
+        }
+
+
+        item.completed =
+            !item.completed;
+
+        item.updatedAt =
+            new Date().toISOString();
+
+
+        saveData();
+
+        renderAll();
+
+        return;
+    }
+
+
+    if (action === "edit-deadline") {
+
+        const item =
+            data.deadlines.find(
+                deadline =>
+                    deadline.id === id
+            );
+
+        if (item) {
+            addDeadline(item);
+        }
+
+        return;
+    }
+
+
+    if (action === "delete-deadline") {
+
+        if (
+            confirm(
+                "Move this deadline to Trash?"
+            )
+        ) {
+            deleteItem(
+                "deadline",
+                id
+            );
+        }
+
+        return;
+    }
+
+
+    if (action === "edit-schedule") {
+
+        const item =
+            data.schedule.find(
+                schedule =>
+                    schedule.id === id
+            );
+
+        if (item) {
+            addSchedule(item);
+        }
+
+        return;
+    }
+
+
+    if (action === "delete-schedule") {
+
+        if (
+            confirm(
+                "Move this class to Trash?"
+            )
+        ) {
+            deleteItem(
+                "schedule",
+                id
+            );
+        }
+
+        return;
+    }
+
+
+    if (action === "edit-note") {
+
+        const item =
+            data.notes.find(
+                note => note.id === id
+            );
+
+        if (item) {
+            addNote(item);
+        }
+
+        return;
+    }
+
+
+    if (action === "delete-note") {
+
+        if (
+            confirm(
+                "Move this note to Trash?"
+            )
+        ) {
+            deleteItem(
+                "note",
+                id
+            );
+        }
+
+        return;
+    }
+
+
+    if (action === "pin-note") {
+
+        const item =
+            data.notes.find(
+                note => note.id === id
+            );
+
+        if (!item) {
+            return;
+        }
+
+
+        item.pinned =
+            !item.pinned;
+
+        item.updatedAt =
+            new Date().toISOString();
+
+
+        saveData();
+
+        renderNotes();
+
+        return;
+    }
+
+
+    if (action === "edit-link") {
+
+        const item =
+            data.links.find(
+                link => link.id === id
+            );
+
+        if (item) {
+            addLink(item);
+        }
+
+        return;
+    }
+
+
+    if (action === "delete-link") {
+
+        if (
+            confirm(
+                "Move this link to Trash?"
+            )
+        ) {
+            deleteItem(
+                "link",
+                id
+            );
+        }
+
+        return;
+    }
+
+
+    if (action === "restore-trash") {
+
+        restoreTrash(id);
+
+        return;
+    }
+
+
+    if (action === "permanent-trash") {
+
+        if (
+            confirm(
+                "Permanently delete this item?"
+            )
+        ) {
+            permanentlyDeleteTrash(id);
+        }
+
+        return;
+    }
+}
+
+
+/* =========================================
+   CALCULATOR
+========================================= */
+
+function setupCalculator() {
+
+    document.querySelectorAll(
+        "[data-calculator]"
+    ).forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                calculatorInput(
+                    button.dataset.calculator
+                );
+            }
+        );
+    });
+
+
+    updateCalculatorDisplay();
+}
+
+
+function calculatorInput(value) {
+
+    const display =
+        document.getElementById(
+            "calculatorDisplay"
+        );
+
+
+    if (value === "clear") {
+
+        calculatorExpression = "";
+
+        updateCalculatorDisplay();
+
+        return;
+    }
+
+
+    if (value === "delete") {
+
+        calculatorExpression =
+            calculatorExpression.slice(
+                0,
+                -1
+            );
+
+        updateCalculatorDisplay();
+
+        return;
+    }
+
+
+    if (value === "=") {
+
+        calculateRegular();
+
+        return;
+    }
+
+
+    const converted =
+        value === "×"
+            ? "*"
+            : value === "÷"
+                ? "/"
+                : value;
+
+
+    calculatorExpression +=
+        converted;
+
+    display.textContent =
+        calculatorExpression || "0";
+}
+
+
+function updateCalculatorDisplay() {
+
+    const display =
+        document.getElementById(
+            "calculatorDisplay"
+        );
+
+    if (display) {
 
         display.textContent =
             calculatorExpression || "0";
     }
+}
 
-    function calculateExpression(expression) {
-        if (!expression) return "";
 
-        let clean = expression
-            .replace(/×/g, "*")
-            .replace(/÷/g, "/")
-            .replace(/%/g, "/100");
+function calculateRegular() {
 
-        if (!/^[0-9+\-*/().\s]+$/.test(clean)) {
-            throw new Error("Invalid expression");
+    try {
+
+        let expression =
+            calculatorExpression;
+
+
+        expression =
+            expression.replace(
+                /(\d+(?:\.\d+)?)%/g,
+                "($1/100)"
+            );
+
+
+        if (
+            !/^[0-9+\-*/().%\s]+$/
+                .test(expression)
+        ) {
+            throw new Error();
         }
 
-        // eslint-disable-next-line no-new-func
-        const result = Function(
-            `"use strict"; return (${clean})`
-        )();
+
+        const result =
+            Function(
+                `"use strict"; return (${expression})`
+            )();
+
 
         if (
             typeof result !== "number" ||
             !Number.isFinite(result)
         ) {
-            throw new Error("Invalid calculation");
+            throw new Error();
         }
 
-        return String(
-            Math.round((result + Number.EPSILON) * 1e12) /
-                1e12
-        );
-    }
 
-    function calculatorInput(value) {
-        if (value === "clear") {
-            calculatorExpression = "";
-        } else if (value === "delete") {
-            calculatorExpression =
-                calculatorExpression.slice(0, -1);
-        } else if (value === "=") {
-            try {
-                calculatorExpression =
-                    calculateExpression(
-                        calculatorExpression
-                    );
-            } catch {
-                calculatorExpression = "";
-                showToast("Invalid calculation.");
-            }
-        } else {
-            calculatorExpression += value;
-        }
+        calculatorExpression =
+            String(
+                Math.round(
+                    result * 1e12
+                ) / 1e12
+            );
+
 
         updateCalculatorDisplay();
-    }
 
-    /* =========================================================
-       SCIENTIFIC CALCULATOR
-       ========================================================= */
+    } catch {
 
-    let scientificExpression = "";
-    let angleMode = "DEG";
+        calculatorExpression = "";
 
-    function updateScientificDisplay() {
-        const display = $("#scientificDisplay");
-
-        if (!display) return;
-
-        display.textContent =
-            scientificExpression || "0";
-    }
-
-    function angleToRadians(value) {
-        return angleMode === "DEG"
-            ? value * Math.PI / 180
-            : value;
-    }
-
-    function scientificCalculate(expression) {
-        if (!expression) return "";
-
-        let exp = expression;
-
-        exp = exp
-            .replace(/π/g, "Math.PI")
-            .replace(/\be\b/g, "Math.E")
-            .replace(/sqrt\(/g, "Math.sqrt(")
-            .replace(/sin\(/g, `Math.sin(${angleMode === "DEG" ? "Math.PI/180*" : ""}`)
-            .replace(/cos\(/g, `Math.cos(${angleMode === "DEG" ? "Math.PI/180*" : ""}`)
-            .replace(/tan\(/g, `Math.tan(${angleMode === "DEG" ? "Math.PI/180*" : ""}`)
-            .replace(/asin\(/g, `Math.asin(`)
-            .replace(/acos\(/g, `Math.acos(`)
-            .replace(/atan\(/g, `Math.atan(`)
-            .replace(/log\(/g, "Math.log10(")
-            .replace(/ln\(/g, "Math.log(")
-            .replace(/\^/g, "**")
-            .replace(/×/g, "*")
-            .replace(/÷/g, "/");
-
-        if (!/^[0-9+\-*/().,\sA-Za-z]+$/.test(exp)) {
-            throw new Error("Invalid expression");
-        }
-
-        // eslint-disable-next-line no-new-func
-        const result = Function(
-            `"use strict"; return (${exp})`
-        )();
-
-        if (
-            typeof result !== "number" ||
-            !Number.isFinite(result)
-        ) {
-            throw new Error("Invalid calculation");
-        }
-
-        return String(
-            Math.round((result + Number.EPSILON) * 1e12) /
-                1e12
-        );
-    }
-
-    function scientificInput(value) {
-        if (value === "clear") {
-            scientificExpression = "";
-        } else if (value === "delete") {
-            scientificExpression =
-                scientificExpression.slice(0, -1);
-        } else if (value === "=") {
-            try {
-                scientificExpression =
-                    scientificCalculate(
-                        scientificExpression
-                    );
-            } catch {
-                scientificExpression = "";
-                showToast("Invalid calculation.");
-            }
-        } else if (value === "square") {
-            scientificExpression += "^2";
-        } else if (value === "sqrt") {
-            scientificExpression += "sqrt(";
-        } else if (value === "sin") {
-            scientificExpression += "sin(";
-        } else if (value === "cos") {
-            scientificExpression += "cos(";
-        } else if (value === "tan") {
-            scientificExpression += "tan(";
-        } else if (value === "asin") {
-            scientificExpression += "asin(";
-        } else if (value === "acos") {
-            scientificExpression += "acos(";
-        } else if (value === "atan") {
-            scientificExpression += "atan(";
-        } else if (value === "log") {
-            scientificExpression += "log(";
-        } else if (value === "ln") {
-            scientificExpression += "ln(";
-        } else if (value === "inverse") {
-            scientificExpression = `1/(${scientificExpression || "0"})`;
-        } else {
-            scientificExpression += value;
-        }
-
-        updateScientificDisplay();
-    }
-
-    function setupCalculators() {
-        $$("[data-calculator]").forEach(button => {
-            button.addEventListener("click", () => {
-                calculatorInput(
-                    button.dataset.calculator
-                );
-            });
-        });
-
-        $$("[data-scientific]").forEach(button => {
-            button.addEventListener("click", () => {
-                scientificInput(
-                    button.dataset.scientific
-                );
-            });
-        });
-
-        $("#angleModeButton")?.addEventListener(
-            "click",
-            () => {
-                angleMode =
-                    angleMode === "DEG"
-                        ? "RAD"
-                        : "DEG";
-
-                $("#angleModeButton").textContent =
-                    angleMode;
-
-                showToast(
-                    `Scientific calculator: ${angleMode}`
-                );
-            }
-        );
-
-        updateCalculatorDisplay();
-        updateScientificDisplay();
-    }
-
-    /* =========================================================
-       STUDY TIMER
-       ========================================================= */
-
-    let timerSeconds = 0;
-    let timerInterval = null;
-    let timerRunning = false;
-
-    function formatTimer(seconds) {
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-
-        return [
-            String(hrs).padStart(2, "0"),
-            String(mins).padStart(2, "0"),
-            String(secs).padStart(2, "0")
-        ].join(":");
-    }
-
-    function updateTimerDisplay() {
-        const display = $("#timerDisplay");
+        const display =
+            document.getElementById(
+                "calculatorDisplay"
+            );
 
         if (display) {
             display.textContent =
-                formatTimer(timerSeconds);
+                "Error";
+        }
+    }
+}
+
+
+/* =========================================
+   SCIENTIFIC CALCULATOR
+========================================= */
+
+function setupScientificCalculator() {
+
+    document.querySelectorAll(
+        "[data-scientific]"
+    ).forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                scientificInput(
+                    button.dataset.scientific
+                );
+            }
+        );
+    });
+
+
+    document.getElementById(
+        "angleModeButton"
+    )?.addEventListener(
+        "click",
+        () => {
+
+            angleMode =
+                angleMode === "DEG"
+                    ? "RAD"
+                    : "DEG";
+
+            document.getElementById(
+                "angleModeButton"
+            ).textContent =
+                angleMode;
+
+        }
+    );
+
+
+    updateScientificDisplay();
+}
+
+
+function scientificInput(value) {
+
+    if (value === "clear") {
+
+        scientificExpression = "";
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "delete") {
+
+        scientificExpression =
+            scientificExpression.slice(
+                0,
+                -1
+            );
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "=") {
+
+        calculateScientific();
+
+        return;
+    }
+
+
+    if (
+        [
+            "sin",
+            "cos",
+            "tan",
+            "asin",
+            "acos",
+            "atan",
+            "sqrt",
+            "log",
+            "ln"
+        ].includes(value)
+    ) {
+
+        scientificExpression +=
+            `${value}(`;
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "square") {
+
+        scientificExpression +=
+            "^2";
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "inverse") {
+
+        scientificExpression =
+            `1/(${scientificExpression || "0"})`;
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "π") {
+
+        scientificExpression +=
+            "pi";
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "e") {
+
+        scientificExpression +=
+            "e";
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "×") {
+
+        scientificExpression += "*";
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    if (value === "÷") {
+
+        scientificExpression += "/";
+
+        updateScientificDisplay();
+
+        return;
+    }
+
+
+    scientificExpression += value;
+
+    updateScientificDisplay();
+}
+
+
+function updateScientificDisplay() {
+
+    const display =
+        document.getElementById(
+            "scientificDisplay"
+        );
+
+    if (!display) {
+        return;
+    }
+
+
+    display.textContent =
+        scientificExpression
+            .replace(/pi/g, "π")
+            .replace(/\*/g, "×")
+            .replace(/\//g, "÷") ||
+        "0";
+}
+
+
+function calculateScientific() {
+
+    try {
+
+        let expression =
+            scientificExpression;
+
+
+        expression =
+            expression.replace(
+                /\^/g,
+                "**"
+            );
+
+
+        expression =
+            expression.replace(
+                /pi/g,
+                "Math.PI"
+            );
+
+
+        expression =
+            expression.replace(
+                /\be\b/g,
+                "Math.E"
+            );
+
+
+        expression =
+            expression.replace(
+                /sqrt\(/g,
+                "Math.sqrt("
+            );
+
+
+        expression =
+            expression.replace(
+                /log\(/g,
+                "Math.log10("
+            );
+
+
+        expression =
+            expression.replace(
+                /ln\(/g,
+                "Math.log("
+            );
+
+
+        expression =
+            expression.replace(
+                /sin\(/g,
+                angleMode === "DEG"
+                    ? "Math.sin(Math.PI/180*("
+                    : "Math.sin("
+            );
+
+
+        expression =
+            expression.replace(
+                /cos\(/g,
+                angleMode === "DEG"
+                    ? "Math.cos(Math.PI/180*("
+                    : "Math.cos("
+            );
+
+
+        expression =
+            expression.replace(
+                /tan\(/g,
+                angleMode === "DEG"
+                    ? "Math.tan(Math.PI/180*("
+                    : "Math.tan("
+            );
+
+
+        expression =
+            expression.replace(
+                /asin\(/g,
+                angleMode === "DEG"
+                    ? "(180/Math.PI*Math.asin("
+                    : "Math.asin("
+            );
+
+
+        expression =
+            expression.replace(
+                /acos\(/g,
+                angleMode === "DEG"
+                    ? "(180/Math.PI*Math.acos("
+                    : "Math.acos("
+            );
+
+
+        expression =
+            expression.replace(
+                /atan\(/g,
+                angleMode === "DEG"
+                    ? "(180/Math.PI*Math.atan("
+                    : "Math.atan("
+            );
+
+
+        if (
+            !/^[0-9+\-*/().\sA-Za-z]+$/
+                .test(expression)
+        ) {
+            throw new Error();
         }
 
-        const status = $("#timerStatus");
 
-        if (status) {
-            status.textContent = timerRunning
+        const result =
+            Function(
+                `"use strict"; return (${expression})`
+            )();
+
+
+        if (
+            typeof result !== "number" ||
+            !Number.isFinite(result)
+        ) {
+            throw new Error();
+        }
+
+
+        scientificExpression =
+            String(
+                Math.round(
+                    result * 1e12
+                ) / 1e12
+            );
+
+
+        updateScientificDisplay();
+
+    } catch {
+
+        scientificExpression = "";
+
+        const display =
+            document.getElementById(
+                "scientificDisplay"
+            );
+
+        if (display) {
+            display.textContent =
+                "Error";
+        }
+    }
+}
+
+
+/* =========================================
+   TIMER
+========================================= */
+
+function formatTimer(seconds) {
+
+    const hours =
+        Math.floor(
+            seconds / 3600
+        );
+
+    const minutes =
+        Math.floor(
+            (seconds % 3600) / 60
+        );
+
+    const remainingSeconds =
+        seconds % 60;
+
+
+    return [
+        hours,
+        minutes,
+        remainingSeconds
+    ]
+        .map(
+            number =>
+                String(number)
+                    .padStart(2, "0")
+        )
+        .join(":");
+}
+
+
+function updateTimerDisplay() {
+
+    const display =
+        document.getElementById(
+            "timerDisplay"
+        );
+
+    const status =
+        document.getElementById(
+            "timerStatus"
+        );
+
+
+    if (display) {
+
+        display.textContent =
+            formatTimer(
+                data.timer.seconds
+            );
+    }
+
+
+    if (status) {
+
+        status.textContent =
+            data.timer.running
                 ? "Studying..."
-                : timerSeconds > 0
-                ? "Paused"
-                : "Ready";
-        }
+                : data.timer.seconds > 0
+                    ? "Paused"
+                    : "Ready";
     }
 
-    function startTimer() {
-        if (timerRunning) return;
 
-        timerRunning = true;
+    const startButton =
+        document.getElementById(
+            "timerStart"
+        );
 
-        timerInterval = setInterval(() => {
-            timerSeconds++;
-            updateTimerDisplay();
-        }, 1000);
 
-        const button = $("#timerStart");
+    if (startButton) {
 
-        if (button) {
-            button.textContent = "Pause";
-        }
-
-        updateTimerDisplay();
+        startButton.textContent =
+            data.timer.running
+                ? "Pause"
+                : data.timer.seconds > 0
+                    ? "Resume"
+                    : "Start";
     }
+}
 
-    function pauseTimer() {
-        if (!timerRunning) return;
 
-        clearInterval(timerInterval);
-        timerInterval = null;
-        timerRunning = false;
+function startTimer() {
 
-        const button = $("#timerStart");
+    if (data.timer.running) {
 
-        if (button) {
-            button.textContent = "Resume";
-        }
+        data.timer.running = false;
 
-        updateTimerDisplay();
-    }
-
-    function resetTimer() {
-        clearInterval(timerInterval);
+        clearInterval(
+            timerInterval
+        );
 
         timerInterval = null;
-        timerRunning = false;
-        timerSeconds = 0;
 
-        const button = $("#timerStart");
-
-        if (button) {
-            button.textContent = "Start";
-        }
+        saveData();
 
         updateTimerDisplay();
+
+        return;
     }
 
-    function setupTimer() {
-        $("#timerStart")?.addEventListener("click", () => {
-            if (timerRunning) {
-                pauseTimer();
-            } else {
-                startTimer();
-            }
-        });
 
-        $("#timerReset")?.addEventListener(
-            "click",
-            resetTimer
-        );
+    data.timer.running = true;
 
-        updateTimerDisplay();
-    }
+    saveData();
 
-    /* =========================================================
-       GLOBAL SEARCH
-       ========================================================= */
+    updateTimerDisplay();
 
-    function performSearch(query) {
-        const term = query.trim().toLowerCase();
 
-        if (!term) {
-            renderAll();
-            return;
-        }
+    timerInterval =
+        setInterval(
+            () => {
 
-        const matches = [];
-
-        data.subjects.forEach(item => {
-            if (
-                item.name
-                    .toLowerCase()
-                    .includes(term)
-            ) {
-                matches.push({
-                    type: "Subject",
-                    title: item.name
-                });
-            }
-        });
-
-        data.tasks.forEach(item => {
-            if (
-                `${item.title} ${item.description || ""}`
-                    .toLowerCase()
-                    .includes(term)
-            ) {
-                matches.push({
-                    type: "Task",
-                    title: item.title
-                });
-            }
-        });
-
-        data.deadlines.forEach(item => {
-            if (
-                `${item.title} ${item.description || ""}`
-                    .toLowerCase()
-                    .includes(term)
-            ) {
-                matches.push({
-                    type: "Deadline",
-                    title: item.title
-                });
-            }
-        });
-
-        data.notes.forEach(item => {
-            if (
-                `${item.title} ${item.content || ""}`
-                    .toLowerCase()
-                    .includes(term)
-            ) {
-                matches.push({
-                    type: "Note",
-                    title: item.title
-                });
-            }
-        });
-
-        data.schedule.forEach(item => {
-            if (
-                `${item.day} ${item.subject} ${item.teacher || ""}`
-                    .toLowerCase()
-                    .includes(term)
-            ) {
-                matches.push({
-                    type: "Class",
-                    title: `${item.subject} — ${item.day}`
-                });
-            }
-        });
-
-        data.links.forEach(item => {
-            if (
-                `${item.name} ${item.url}`
-                    .toLowerCase()
-                    .includes(term)
-            ) {
-                matches.push({
-                    type: "Link",
-                    title: item.name
-                });
-            }
-        });
-
-        const container = $("#searchResults");
-
-        if (!container) {
-            // If the current HTML doesn't have a dedicated
-            // search result area, show the results in a toast.
-            if (!matches.length) {
-                showToast("No results found.");
-            } else {
-                showToast(
-                    `${matches.length} result${
-                        matches.length === 1 ? "" : "s"
-                    } found.`
-                );
-            }
-
-            return;
-        }
-
-        if (!matches.length) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <p>No results found.</p>
-                </div>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = matches
-            .map(
-                result => `
-                <div class="search-result">
-                    <span>${escapeHTML(result.type)}</span>
-                    <strong>${escapeHTML(result.title)}</strong>
-                </div>
-            `
-            )
-            .join("");
-    }
-
-    function setupSearch() {
-        $("#globalSearch")?.addEventListener(
-            "input",
-            event => {
-                performSearch(event.target.value);
-            }
-        );
-    }
-
-    /* =========================================================
-       EXPORT / IMPORT
-       ========================================================= */
-
-    function exportData() {
-        const backup = {
-            app: "Due Tomorrow, Do Tomorrow",
-            exportedAt: new Date().toISOString(),
-            data
-        };
-
-        const blob = new Blob(
-            [JSON.stringify(backup, null, 2)],
-            {
-                type: "application/json"
-            }
-        );
-
-        const url = URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-
-        link.href = url;
-        link.download =
-            "due-tomorrow-backup.json";
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        URL.revokeObjectURL(url);
-
-        showToast("Backup exported.");
-    }
-
-    function importData() {
-        const input = document.createElement("input");
-
-        input.type = "file";
-        input.accept = ".json,application/json";
-
-        input.addEventListener("change", event => {
-            const file = event.target.files?.[0];
-
-            if (!file) return;
-
-            const reader = new FileReader();
-
-            reader.onload = () => {
-                try {
-                    const imported = JSON.parse(
-                        reader.result
-                    );
-
-                    const importedData =
-                        imported.data || imported;
-
-                    if (
-                        !importedData ||
-                        typeof importedData !==
-                            "object"
-                    ) {
-                        throw new Error(
-                            "Invalid backup"
-                        );
-                    }
-
-                    const confirmed = confirm(
-                        "Import this backup? Your current local data will be replaced."
-                    );
-
-                    if (!confirmed) return;
-
-                    data = {
-                        ...structuredClone(
-                            defaultData
-                        ),
-                        ...importedData
-                    };
-
-                    if (!data.folders?.length) {
-                        data.folders = [
-                            {
-                                id: "unfiled",
-                                name: "Unfiled"
-                            }
-                        ];
-                    }
-
-                    saveData();
-                    applyTheme();
-                    renderAll();
-
-                    showToast("Backup imported.");
-                } catch (error) {
-                    console.error(error);
-                    showToast(
-                        "That file is not a valid backup."
-                    );
+                if (!data.timer.running) {
+                    return;
                 }
-            };
 
-            reader.readAsText(file);
-        });
-
-        input.click();
-    }
-
-    /* =========================================================
-       QUICK ACTIONS
-       ========================================================= */
-
-    function setupQuickActions() {
-        $("#addTaskButton")?.addEventListener(
-            "click",
-            addTask
-        );
-
-        $("#addSubjectButton")?.addEventListener(
-            "click",
-            addSubject
-        );
-
-        $("#addDeadlineButton")?.addEventListener(
-            "click",
-            addDeadline
-        );
-
-        $("#addNoteButton")?.addEventListener(
-            "click",
-            addNote
-        );
-
-        $("#addScheduleButton")?.addEventListener(
-            "click",
-            addSchedule
-        );
-
-        $("#addFolderButton")?.addEventListener(
-            "click",
-            addFolder
-        );
-
-        $("#manageFoldersButton")?.addEventListener(
-            "click",
-            manageFolders
-        );
-
-        $("#emptyTrashButton")?.addEventListener(
-            "click",
-            emptyTrash
-        );
-
-        $("#exportButton")?.addEventListener(
-            "click",
-            exportData
-        );
-
-        $("#importButton")?.addEventListener(
-            "click",
-            importData
-        );
-    }
-
-    /* =========================================================
-       EVENT DELEGATION
-       ========================================================= */
-
-    document.addEventListener("click", event => {
-        const button =
-            event.target.closest("[data-action]");
-
-        if (!button) return;
-
-        const action = button.dataset.action;
-        const id = button.dataset.id;
-
-        switch (action) {
-            case "add-subject":
-                addSubject();
-                break;
-
-            case "edit-subject":
-                editSubject(id);
-                break;
-
-            case "delete-subject":
-                deleteItem("subject", id);
-                break;
-
-            case "toggle-task": {
-                const task = data.tasks.find(
-                    item => item.id === id
-                );
-
-                if (!task) return;
-
-                task.completed = !task.completed;
+                data.timer.seconds++;
 
                 saveData();
+
+                updateTimerDisplay();
+
+            },
+            1000
+        );
+}
+
+
+function resetTimer() {
+
+    data.timer.running = false;
+
+    data.timer.seconds = 0;
+
+    clearInterval(
+        timerInterval
+    );
+
+    timerInterval = null;
+
+    saveData();
+
+    updateTimerDisplay();
+}
+
+
+function setupTimer() {
+
+    document.getElementById(
+        "timerStart"
+    )?.addEventListener(
+        "click",
+        startTimer
+    );
+
+
+    document.getElementById(
+        "timerReset"
+    )?.addEventListener(
+        "click",
+        resetTimer
+    );
+
+
+    updateTimerDisplay();
+
+
+    if (data.timer.running) {
+
+        data.timer.running = false;
+
+        saveData();
+    }
+}
+
+
+/* =========================================
+   SEARCH
+========================================= */
+
+function setupSearch() {
+
+    const search =
+        document.getElementById(
+            "globalSearch"
+        );
+
+
+    const clear =
+        document.getElementById(
+            "clearSearch"
+        );
+
+
+    if (!search) {
+        return;
+    }
+
+
+    search.addEventListener(
+        "input",
+        performSearch
+    );
+
+
+    clear?.addEventListener(
+        "click",
+        () => {
+
+            search.value = "";
+
+            performSearch();
+
+            search.focus();
+        }
+    );
+}
+
+
+function performSearch() {
+
+    const input =
+        document.getElementById(
+            "globalSearch"
+        );
+
+
+    const query =
+        input?.value
+            .trim()
+            .toLowerCase() || "";
+
+
+    document.querySelectorAll(
+        "[data-search]"
+    ).forEach(item => {
+
+        const text =
+            item.dataset.search
+                .toLowerCase();
+
+
+        item.classList.toggle(
+            "search-hidden",
+            query.length > 0 &&
+            !text.includes(query)
+        );
+    });
+}
+
+
+/* =========================================
+   EXPORT / IMPORT
+========================================= */
+
+function exportData() {
+
+    const json =
+        JSON.stringify(
+            data,
+            null,
+            2
+        );
+
+
+    const blob =
+        new Blob(
+            [json],
+            {
+                type:
+                    "application/json"
+            }
+        );
+
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const link =
+        document.createElement("a");
+
+
+    link.href = url;
+
+    link.download =
+        "due-tomorrow-data.json";
+
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    URL.revokeObjectURL(url);
+
+
+    showToast(
+        "Data exported"
+    );
+}
+
+
+function importData(file) {
+
+    if (!file) {
+        return;
+    }
+
+
+    const reader =
+        new FileReader();
+
+
+    reader.onload =
+        event => {
+
+            try {
+
+                const imported =
+                    JSON.parse(
+                        event.target.result
+                    );
+
+
+                if (
+                    typeof imported !==
+                    "object" ||
+                    imported === null
+                ) {
+                    throw new Error();
+                }
+
+
+                data = {
+                    ...structuredClone(
+                        DEFAULT_DATA
+                    ),
+
+                    ...imported
+                };
+
+
+                saveData();
+
+                applyTheme();
+
                 renderAll();
 
                 showToast(
-                    task.completed
-                        ? "Task completed!"
-                        : "Task marked active."
+                    "Data imported successfully"
                 );
 
-                break;
-            }
-
-            case "edit-task":
-                editTask(id);
-                break;
-
-            case "delete-task":
-                deleteItem("task", id);
-                break;
-
-            case "edit-deadline":
-                editDeadline(id);
-                break;
-
-            case "delete-deadline":
-                deleteItem("deadline", id);
-                break;
-
-            case "add-schedule":
-                addSchedule();
-                break;
-
-            case "edit-schedule":
-                editSchedule(id);
-                break;
-
-            case "delete-schedule":
-                deleteItem("schedule", id);
-                break;
-
-            case "add-note":
-                addNote();
-                break;
-
-            case "edit-note":
-                editNote(id);
-                break;
-
-            case "delete-note":
-                deleteItem("note", id);
-                break;
-
-            case "pin-note": {
-                const note = data.notes.find(
-                    item => item.id === id
-                );
-
-                if (!note) return;
-
-                note.pinned = !note.pinned;
-                note.updatedAt =
-                    new Date().toISOString();
-
-                saveData();
-                renderNotes();
+            } catch {
 
                 showToast(
-                    note.pinned
-                        ? "Note pinned."
-                        : "Note unpinned."
+                    "Invalid data file"
                 );
-
-                break;
             }
+        };
 
-            case "add-link":
-                addLink();
-                break;
 
-            case "edit-link":
-                editLink(id);
-                break;
+    reader.readAsText(file);
+}
 
-            case "delete-link":
-                deleteItem("link", id);
-                break;
 
-            case "restore-trash":
-                restoreTrash(id);
-                break;
+function setupImportExport() {
 
-            case "permanent-delete":
-                permanentlyDeleteTrash(id);
-                break;
+    document.getElementById(
+        "exportButton"
+    )?.addEventListener(
+        "click",
+        exportData
+    );
+
+
+    document.getElementById(
+        "importButton"
+    )?.addEventListener(
+        "click",
+        () => {
+
+            const input =
+                document.createElement("input");
+
+            input.type = "file";
+
+            input.accept =
+                "application/json,.json";
+
+
+            input.addEventListener(
+                "change",
+                () => {
+
+                    importData(
+                        input.files[0]
+                    );
+                }
+            );
+
+
+            input.click();
         }
-    });
+    );
+}
 
-    /* =========================================================
-       RENDER EVERYTHING
-       ========================================================= */
 
-    function renderAll() {
-        renderSubjects();
-        renderTasks();
-        renderDeadlines();
-        renderSchedule();
-        renderFolderFilter();
-        renderNotes();
-        renderLinks();
-        renderTrash();
-        renderStats();
-        updateWelcome();
+/* =========================================
+   CLEAR ALL
+========================================= */
+
+function clearAllData() {
+
+    const confirmed =
+        confirm(
+            "This will permanently remove all saved data from this browser. Continue?"
+        );
+
+
+    if (!confirmed) {
+        return;
     }
 
-    /* =========================================================
-       KEYBOARD SHORTCUTS
-       ========================================================= */
 
-    document.addEventListener("keydown", event => {
-        if (event.key === "Escape") {
-            closeModal();
-        }
-    });
+    localStorage.removeItem(
+        STORAGE_KEY
+    );
 
-    /* =========================================================
-       START APP
-       ========================================================= */
 
-    setupTheme();
-    setupTaskFilters();
-    setupNotes();
-    setupCalculators();
-    setupTimer();
-    setupSearch();
-    setupQuickActions();
+    data =
+        structuredClone(
+            DEFAULT_DATA
+        );
+
+
+    calculatorExpression = "";
+
+    scientificExpression = "";
+
+
+    applyTheme();
 
     renderAll();
 
-    console.log(
-        "Due Tomorrow, Do Tomorrow loaded successfully."
+    updateCalculatorDisplay();
+
+    updateScientificDisplay();
+
+    showToast(
+        "All local data cleared"
     );
-});
+}
+
+
+/* =========================================
+   EVENT LISTENERS
+========================================= */
+
+function setupButtons() {
+
+    document.getElementById(
+        "quickTaskButton"
+    )?.addEventListener(
+        "click",
+        () => addTask()
+    );
+
+
+    document.getElementById(
+        "addTaskButton"
+    )?.addEventListener(
+        "click",
+        () => addTask()
+    );
+
+
+    document.getElementById(
+        "quickSubjectButton"
+    )?.addEventListener(
+        "click",
+        () => addSubject()
+    );
+
+
+    document.getElementById(
+        "addSubjectButton"
+    )?.addEventListener(
+        "click",
+        () => addSubject()
+    );
+
+
+    document.getElementById(
+        "quickDeadlineButton"
+    )?.addEventListener(
+        "click",
+        () => addDeadline()
+    );
+
+
+    document.getElementById(
+        "addDeadlineButton"
+    )?.addEventListener(
+        "click",
+        () => addDeadline()
+    );
+
+
+    document.getElementById(
+        "quickNoteButton"
+    )?.addEventListener(
+        "click",
+        () => addNote()
+    );
+
+
+    document.getElementById(
+        "addNoteButton"
+    )?.addEventListener(
+        "click",
+        () => addNote()
+    );
+
+
+    document.getElementById(
+        "addScheduleButton"
+    )?.addEventListener(
+        "click",
+        () => addSchedule()
+    );
+
+
+    document.getElementById(
+        "addFolderButton"
+    )?.addEventListener(
+        "click",
+        addFolder
+    );
+
+
+    document.getElementById(
+        "manageFoldersButton"
+    )?.addEventListener(
+        "click",
+        manageFolders
+    );
+
+
+    document.getElementById(
+        "addLinkButton"
+    )?.addEventListener(
+        "click",
+        () => addLink()
+    );
+
+
+    document.getElementById(
+        "emptyTrashButton"
+    )?.addEventListener(
+        "click",
+        () => {
+
+            if (
+                data.trash.length === 0
+            ) {
+                showToast(
+                    "Trash is already empty"
+                );
+
+                return;
+            }
+
+
+            const confirmed =
+                confirm(
+                    "Permanently delete everything in Trash?"
+                );
+
+
+            if (!confirmed) {
+                return;
+            }
+
+
+            data.trash = [];
+
+            saveData();
+
+            renderTrash();
+
+            showToast(
+                "Trash emptied"
+            );
+        }
+    );
+
+
+    document.getElementById(
+        "clearAllButton"
+    )?.addEventListener(
+        "click",
+        clearAllData
+    );
+
+
+    document.querySelectorAll(
+        ".task-filter"
+    ).forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                currentTaskFilter =
+                    button.dataset.filter;
+
+
+                document.querySelectorAll(
+                    ".task-filter"
+                ).forEach(item => {
+
+                    item.classList.toggle(
+                        "active",
+                        item === button
+                    );
+                });
+
+
+                renderTasks();
+            }
+        );
+    });
+
+
+    document.getElementById(
+        "notesFolderFilter"
+    )?.addEventListener(
+        "change",
+        renderNotes
+    );
+
+
+    document.getElementById(
+        "notesSort"
+    )?.addEventListener(
+        "change",
+        renderNotes
+    );
+}
+
+
+/* =========================================
+   GLOBAL ACTION CLICK HANDLER
+========================================= */
+
+function setupDelegatedActions() {
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-action]"
+                );
+
+
+            if (!button) {
+                return;
+            }
+
+
+            const action =
+                button.dataset.action;
+
+
+            const id =
+                button.dataset.id;
+
+
+            if (
+                action === "toggle-task"
+            ) {
+
+                const task =
+                    data.tasks.find(
+                        item =>
+                            item.id === id
+                    );
+
+
+                if (task) {
+
+                    task.completed =
+                        !task.completed;
+
+                    task.updatedAt =
+                        new Date()
+                            .toISOString();
+
+                    saveData();
+
+                    renderAll();
+                }
+
+
+                return;
+            }
+
+
+            handleAction(
+                action,
+                id
+            );
+        }
+    );
+}
+
+
+/* =========================================
+   TOAST
+========================================= */
+
+let toastTimeout = null;
+
+
+function showToast(message) {
+
+    const toast =
+        document.getElementById(
+            "toast"
+        );
+
+
+    if (!toast) {
+        return;
+    }
+
+
+    toast.textContent =
+        message;
+
+
+    toast.classList.add(
+        "show"
+    );
+
+
+    clearTimeout(
+        toastTimeout
+    );
+
+
+    toastTimeout =
+        setTimeout(
+            () => {
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            2200
+        );
+}
+
+
+/* =========================================
+   RENDER ALL
+========================================= */
+
+function renderAll() {
+
+    updateGreeting();
+
+    updateStats();
+
+    renderSubjects();
+
+    renderTasks();
+
+    renderSchedule();
+
+    renderDeadlines();
+
+    renderNotes();
+
+    renderLinks();
+
+    renderTrash();
+
+    updateTimerDisplay();
+
+    performSearch();
+}
+
+
+/* =========================================
+   START APP
+========================================= */
+
+function initializeApp() {
+
+    applyTheme();
+
+    setupTheme();
+
+    setupModal();
+
+    setupButtons();
+
+    setupDelegatedActions();
+
+    setupCalculator();
+
+    setupScientificCalculator();
+
+    setupTimer();
+
+    setupSearch();
+
+    setupImportExport();
+
+    renderAll();
+}
+
+
+document.addEventListener(
+    "DOMContentLoaded",
+    initializeApp
+);
