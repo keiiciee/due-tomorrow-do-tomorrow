@@ -1,1714 +1,1330 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+  <meta charset="UTF-8">
 
-    <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+  <meta
+    name="description"
+    content="Due Tomorrow, Do Tomorrow — A little space to get things done."
+  >
 
-    <meta
-        name="theme-color"
-        content="#9b82b8"
-    >
+  <title>Due Tomorrow, Do Tomorrow</title>
 
-    <meta
-        name="description"
-        content="Due Tomorrow, Do Tomorrow — A little space to get things done."
-    >
+  <link
+    rel="icon"
+    type="image/png"
+    href="./due-tomorrow-favicon.png"
+  >
 
-    <title>Due Tomorrow, Do Tomorrow</title>
-
-    <link
-        rel="icon"
-        href="./due-tomorrow-favicon.png"
-        type="image/png"
-    >
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
-
+  <link rel="stylesheet" href="style.css">
 </head>
 
+<body data-theme="lavender">
 
-<body>
+  <!-- =====================================================
+       HEADER
+       ===================================================== -->
 
-<div class="app">
+  <header>
+    <div class="header-inner">
 
+      <div class="brand">
 
-    <!-- =====================================================
-         TOP BAR
-    ====================================================== -->
-
-    <header class="topbar">
-
-        <div class="brand">
-
-            <div class="brand-icon">
-                <img
-                    src="./due-tomorrow-favicon.png"
-                    alt=""
-                >
-            </div>
-
-            <div>
-
-                <h1>
-                    Due Tomorrow, Do Tomorrow
-                </h1>
-
-                <p>
-                    A little space to get things done
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="top-actions">
-
-            <button
-                id="themeButton"
-                class="icon-button"
-                type="button"
-                title="Change color theme"
-                aria-label="Change color theme"
-            >
-                ◐
-            </button>
-
-
-            <button
-                id="darkModeButton"
-                class="icon-button"
-                type="button"
-                title="Toggle dark mode"
-                aria-label="Toggle dark mode"
-            >
-                ☾
-            </button>
-
-
-            <button
-                id="exportButton"
-                class="icon-button"
-                type="button"
-                title="Export data"
-                aria-label="Export data"
-            >
-                ↓
-            </button>
-
-
-            <button
-                id="importButton"
-                class="icon-button"
-                type="button"
-                title="Import data"
-                aria-label="Import data"
-            >
-                ↑
-            </button>
-
-
-            <input
-                id="importFile"
-                type="file"
-                accept=".json"
-                hidden
-            >
-
-        </div>
-
-    </header>
-
-
-
-    <!-- =====================================================
-         THEME PANEL
-    ====================================================== -->
-
-    <section
-        id="themePanel"
-        class="theme-panel hidden"
-    >
-
-        <div class="theme-panel-header">
-
-            <div>
-
-                <span class="section-label">
-                    APPEARANCE
-                </span>
-
-                <h2>
-                    Choose a color
-                </h2>
-
-            </div>
-
-        </div>
-
-
-        <div class="theme-options">
-
-
-            <button
-                class="theme-option"
-                data-theme="lavender"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Lavender
-                </span>
-
-            </button>
-
-
-            <button
-                class="theme-option"
-                data-theme="blush"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Blush Pink
-                </span>
-
-            </button>
-
-
-            <button
-                class="theme-option"
-                data-theme="blue"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Baby Blue
-                </span>
-
-            </button>
-
-
-            <button
-                class="theme-option"
-                data-theme="sage"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Sage Green
-                </span>
-
-            </button>
-
-
-            <button
-                class="theme-option"
-                data-theme="butter"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Butter
-                </span>
-
-            </button>
-
-
-            <button
-                class="theme-option"
-                data-theme="peach"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Soft Peach
-                </span>
-
-            </button>
-
-
-            <button
-                class="theme-option"
-                data-theme="mauve"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Dusty Mauve
-                </span>
-
-            </button>
-
-
-            <button
-                class="theme-option"
-                data-theme="cream"
-                type="button"
-            >
-
-                <span
-                    class="theme-swatch"
-                    aria-hidden="true"
-                ></span>
-
-                <span>
-                    Cream
-                </span>
-
-            </button>
-
-
-        </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         SEARCH
-    ====================================================== -->
-
-    <div class="search-wrapper">
-
-        <span
-            class="search-icon"
-            aria-hidden="true"
-        >
-            ⌕
-        </span>
-
-
-        <input
-            id="globalSearch"
-            type="search"
-            placeholder="Search anything..."
-            autocomplete="off"
+        <img
+          src="./due-tomorrow-favicon.png"
+          alt="Due Tomorrow, Do Tomorrow"
         >
 
+        <div class="brand-text">
+          <h1>Due Tomorrow, Do Tomorrow</h1>
+          <p>A little space to get things done</p>
+        </div>
+
+      </div>
+
+      <div class="header-actions">
 
         <button
-            id="clearSearch"
-            class="clear-search"
-            type="button"
-            aria-label="Clear search"
+          id="themeButton"
+          class="header-button"
+          type="button"
+          aria-label="Choose theme"
         >
-            ×
+          Theme
         </button>
+
+        <button
+          id="darkModeButton"
+          class="header-button"
+          type="button"
+          aria-label="Toggle dark mode"
+        >
+          Dark
+        </button>
+
+        <button
+          id="exportButton"
+          class="header-button"
+          type="button"
+        >
+          Export
+        </button>
+
+        <button
+          id="importButton"
+          class="header-button"
+          type="button"
+        >
+          Import
+        </button>
+
+        <input
+          id="importFile"
+          type="file"
+          accept=".json,application/json"
+          hidden
+        >
+
+      </div>
+
+    </div>
+
+    <!-- ===================================================
+         THEME PANEL
+         =================================================== -->
+
+    <div
+      id="themePanel"
+      class="theme-panel"
+    >
+
+      <h3>Choose a color</h3>
+
+      <div class="theme-options">
+
+        <button
+          class="theme-option"
+          data-theme="lavender"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Lavender
+        </button>
+
+        <button
+          class="theme-option"
+          data-theme="blush"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Blush Pink
+        </button>
+
+        <button
+          class="theme-option"
+          data-theme="blue"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Baby Blue
+        </button>
+
+        <button
+          class="theme-option"
+          data-theme="sage"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Sage Green
+        </button>
+
+        <button
+          class="theme-option"
+          data-theme="butter"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Butter
+        </button>
+
+        <button
+          class="theme-option"
+          data-theme="peach"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Soft Peach
+        </button>
+
+        <button
+          class="theme-option"
+          data-theme="mauve"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Dusty Mauve
+        </button>
+
+        <button
+          class="theme-option"
+          data-theme="cream"
+          type="button"
+        >
+          <span class="theme-swatch"></span>
+          Cream
+        </button>
+
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <!-- =====================================================
+       MAIN
+       ===================================================== -->
+
+  <main>
+
+    <!-- SEARCH -->
+
+    <div class="search-container">
+
+      <input
+        id="globalSearch"
+        type="search"
+        placeholder="Search anything..."
+        autocomplete="off"
+      >
+
+      <button
+        id="clearSearch"
+        type="button"
+        aria-label="Clear search"
+      >
+        ×
+      </button>
 
     </div>
 
 
+    <!-- WELCOME -->
 
-    <!-- =====================================================
-         WELCOME
-    ====================================================== -->
+    <section class="welcome-section">
 
-    <section class="welcome-card">
+      <div>
+        <h2 id="greeting">Good morning</h2>
 
-        <div class="welcome-content">
+        <p>
+          A little space to get things done.
+        </p>
+      </div>
 
-            <span class="eyebrow">
-                STUDY DASHBOARD
-            </span>
+      <div class="progress-box">
 
+        <strong id="progressNumber">0%</strong>
 
-            <h2 id="greeting">
-                Welcome back!
-            </h2>
+        <span>tasks completed</span>
 
-
-            <p>
-                A little space to get things done.
-            </p>
-
-        </div>
-
-
-        <div class="overall-progress">
-
-            <div class="progress-ring">
-
-                <div class="progress-ring-inner">
-
-                    <strong id="progressNumber">
-                        0%
-                    </strong>
-
-                </div>
-
-            </div>
-
-
-            <span>
-                tasks completed
-            </span>
-
-        </div>
+      </div>
 
     </section>
 
 
-
-    <!-- =====================================================
-         STATS
-    ====================================================== -->
+    <!-- STATS -->
 
     <section class="stats-grid">
 
+      <div class="stat-card">
 
-        <div class="stat-card">
-
-            <span class="stat-icon">
-                📚
-            </span>
-
-            <div>
-
-                <strong id="statSubjects">
-                    0
-                </strong>
-
-                <span>
-                    Subjects
-                </span>
-
-            </div>
-
+        <div class="stat-label">
+          Subjects
         </div>
 
-
-        <div class="stat-card">
-
-            <span class="stat-icon">
-                📝
-            </span>
-
-            <div>
-
-                <strong id="statTasks">
-                    0
-                </strong>
-
-                <span>
-                    Total Tasks
-                </span>
-
-            </div>
-
+        <div
+          id="statSubjects"
+          class="stat-number"
+        >
+          0
         </div>
 
+      </div>
 
-        <div class="stat-card">
 
-            <span class="stat-icon">
-                ⏳
-            </span>
+      <div class="stat-card">
 
-            <div>
-
-                <strong id="statPending">
-                    0
-                </strong>
-
-                <span>
-                    Pending
-                </span>
-
-            </div>
-
+        <div class="stat-label">
+          Total Tasks
         </div>
 
-
-        <div class="stat-card danger-stat">
-
-            <span class="stat-icon">
-                ⚠
-            </span>
-
-            <div>
-
-                <strong id="statOverdue">
-                    0
-                </strong>
-
-                <span>
-                    Overdue
-                </span>
-
-            </div>
-
+        <div
+          id="statTasks"
+          class="stat-number"
+        >
+          0
         </div>
 
+      </div>
+
+
+      <div class="stat-card">
+
+        <div class="stat-label">
+          Pending
+        </div>
+
+        <div
+          id="statPending"
+          class="stat-number"
+        >
+          0
+        </div>
+
+      </div>
+
+
+      <div class="stat-card">
+
+        <div class="stat-label">
+          Overdue
+        </div>
+
+        <div
+          id="statOverdue"
+          class="stat-number"
+        >
+          0
+        </div>
+
+      </div>
 
     </section>
 
 
-
-    <!-- =====================================================
-         QUICK ACTIONS
-    ====================================================== -->
+    <!-- QUICK ACTIONS -->
 
     <section class="quick-actions">
 
+      <button
+        id="quickTaskButton"
+        class="quick-button"
+        type="button"
+      >
+        Add Task
+      </button>
 
-        <button
-            id="quickTaskButton"
-            class="quick-button"
-            type="button"
-        >
+      <button
+        id="quickSubjectButton"
+        class="quick-button"
+        type="button"
+      >
+        Add Subject
+      </button>
 
-            <span>
-                ＋
-            </span>
+      <button
+        id="quickDeadlineButton"
+        class="quick-button"
+        type="button"
+      >
+        Add Deadline
+      </button>
 
-            <div>
-
-                <strong>
-                    Add Task
-                </strong>
-
-                <small>
-                    Assignment or activity
-                </small>
-
-            </div>
-
-        </button>
-
-
-        <button
-            id="quickSubjectButton"
-            class="quick-button"
-            type="button"
-        >
-
-            <span>
-                ＋
-            </span>
-
-            <div>
-
-                <strong>
-                    Add Subject
-                </strong>
-
-                <small>
-                    Add a school subject
-                </small>
-
-            </div>
-
-        </button>
-
-
-        <button
-            id="quickDeadlineButton"
-            class="quick-button"
-            type="button"
-        >
-
-            <span>
-                ＋
-            </span>
-
-            <div>
-
-                <strong>
-                    Add Deadline
-                </strong>
-
-                <small>
-                    Important school date
-                </small>
-
-            </div>
-
-        </button>
-
-
-        <button
-            id="quickNoteButton"
-            class="quick-button"
-            type="button"
-        >
-
-            <span>
-                ＋
-            </span>
-
-            <div>
-
-                <strong>
-                    Add Note
-                </strong>
-
-                <small>
-                    Save something important
-                </small>
-
-            </div>
-
-        </button>
-
+      <button
+        id="quickNoteButton"
+        class="quick-button"
+        type="button"
+      >
+        Add Note
+      </button>
 
     </section>
 
 
-
-    <!-- =====================================================
+    <!-- ===================================================
          AI STUDY ASSISTANT
-    ====================================================== -->
+         =================================================== -->
 
-    <section class="card ai-card">
+    <section class="ai-card">
+
+      <div class="ai-header">
+
+        <div>
+          <h2>AI Study Assistant</h2>
+
+          <p>
+            Ask questions, explain lessons, or get study help.
+          </p>
+        </div>
+
+        <button
+          id="aiClearButton"
+          class="small-button"
+          type="button"
+        >
+          Clear chat
+        </button>
+
+      </div>
+
+
+      <div
+        id="aiChatMessages"
+        class="ai-chat-messages"
+      ></div>
+
+
+      <div class="ai-input-row">
+
+        <textarea
+          id="aiInput"
+          rows="1"
+          placeholder="Ask your study question..."
+        ></textarea>
+
+        <button
+          id="aiSendButton"
+          type="button"
+        >
+          Send
+        </button>
+
+      </div>
+
+
+      <div class="ai-footer">
+
+        <span id="aiStatus">
+          Ready to help.
+        </span>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         DASHBOARD
+         =================================================== -->
+
+    <section class="dashboard-grid">
+
+
+      <!-- SUBJECTS -->
+
+      <section class="dashboard-card">
 
         <div class="card-header">
 
-            <div>
+          <h2>Subjects</h2>
 
-                <span class="section-label">
-                    STUDY HELP
-                </span>
+          <div class="card-header-actions">
 
-                <h2>
-                    AI Study Assistant
-                </h2>
+            <button
+              id="addSubjectButton"
+              class="primary-button small-button"
+              type="button"
+            >
+              Add Subject
+            </button>
 
-                <p class="card-subtitle">
-                    Ask questions, review lessons, or get help with schoolwork.
-                </p>
-
-            </div>
+          </div>
 
         </div>
-
 
         <div
-            id="aiChatMessages"
-            class="ai-chat-messages"
-        >
+          id="subjectsList"
+          class="card-body item-list"
+        ></div>
 
-            <div class="ai-message ai-message-assistant">
+      </section>
 
-                <div class="ai-message-bubble">
 
-                    Hi! I'm your study assistant.
-                    What are you working on today?
+      <!-- TASKS -->
 
-                </div>
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Tasks</h2>
+
+          <div class="card-header-actions">
+
+            <div class="filter-buttons">
+
+              <button
+                class="filter-button active"
+                data-filter="all"
+                type="button"
+              >
+                All
+              </button>
+
+              <button
+                class="filter-button"
+                data-filter="pending"
+                type="button"
+              >
+                Pending
+              </button>
+
+              <button
+                class="filter-button"
+                data-filter="completed"
+                type="button"
+              >
+                Completed
+              </button>
+
+              <button
+                class="filter-button"
+                data-filter="high"
+                type="button"
+              >
+                High
+              </button>
 
             </div>
 
+            <button
+              id="addTaskButton"
+              class="primary-button small-button"
+              type="button"
+            >
+              Add Task
+            </button>
+
+          </div>
+
         </div>
 
+        <div
+          id="tasksList"
+          class="card-body item-list"
+        ></div>
 
-        <div class="ai-input-area">
+      </section>
 
-            <textarea
-                id="aiInput"
-                class="ai-input"
-                rows="3"
-                maxlength="4000"
-                placeholder="Ask me anything about your studies..."
-            ></textarea>
+
+      <!-- TODAY'S CLASSES -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Today's Classes</h2>
+
+        </div>
+
+        <div
+          id="todayClasses"
+          class="card-body item-list"
+        ></div>
+
+      </section>
+
+
+      <!-- FULL SCHEDULE -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Class Schedule</h2>
+
+          <div class="card-header-actions">
+
+            <button
+              id="addScheduleButton"
+              class="primary-button small-button"
+              type="button"
+            >
+              Add Class
+            </button>
+
+          </div>
+
+        </div>
+
+        <div
+          id="scheduleList"
+          class="card-body item-list"
+        ></div>
+
+      </section>
+
+
+      <!-- DEADLINES -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Deadlines</h2>
+
+          <div class="card-header-actions">
+
+            <button
+              id="addDeadlineButton"
+              class="primary-button small-button"
+              type="button"
+            >
+              Add Deadline
+            </button>
+
+          </div>
+
+        </div>
+
+        <div
+          id="deadlinesList"
+          class="card-body item-list"
+        ></div>
+
+      </section>
+
+
+      <!-- NOTES -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Notes</h2>
+
+          <div class="card-header-actions notes-controls">
+
+            <select id="notesFolderFilter">
+              <option value="all">
+                All folders
+              </option>
+            </select>
+
+            <select id="notesSort">
+
+              <option value="updated">
+                Recently updated
+              </option>
+
+              <option value="created">
+                Recently created
+              </option>
+
+              <option value="az">
+                A-Z
+              </option>
+
+              <option value="za">
+                Z-A
+              </option>
+
+              <option value="pinned">
+                Pinned first
+              </option>
+
+            </select>
+
+            <button
+              id="addFolderButton"
+              class="small-button"
+              type="button"
+            >
+              Add Folder
+            </button>
+
+            <button
+              id="manageFoldersButton"
+              class="small-button"
+              type="button"
+            >
+              Manage
+            </button>
+
+            <button
+              id="addNoteButton"
+              class="primary-button small-button"
+              type="button"
+            >
+              Add Note
+            </button>
+
+          </div>
+
+        </div>
+
+        <div
+          id="notesList"
+          class="card-body item-list"
+        ></div>
+
+      </section>
+
+
+      <!-- LINKS -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Useful Links</h2>
+
+          <div class="card-header-actions">
+
+            <button
+              id="addLinkButton"
+              class="primary-button small-button"
+              type="button"
+            >
+              Add Link
+            </button>
+
+          </div>
+
+        </div>
+
+        <div
+          id="linksList"
+          class="card-body item-list"
+        ></div>
+
+      </section>
+
+
+      <!-- =================================================
+           REGULAR CALCULATOR
+           ================================================= -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Calculator</h2>
+
+        </div>
+
+        <div class="calculator">
+
+          <div
+            id="calculatorDisplay"
+            class="calculator-display"
+          >
+            0
+          </div>
+
+          <div class="calculator-grid">
+
+            <button
+              data-calculator="clear"
+              type="button"
+            >
+              C
+            </button>
+
+            <button
+              data-calculator="delete"
+              type="button"
+            >
+              DEL
+            </button>
+
+            <button
+              data-calculator="%"
+              type="button"
+              class="operator"
+            >
+              %
+            </button>
+
+            <button
+              data-calculator="÷"
+              type="button"
+              class="operator"
+            >
+              ÷
+            </button>
 
 
             <button
-                id="aiSendButton"
-                class="primary-button ai-send-button"
-                type="button"
+              data-calculator="7"
+              type="button"
             >
-                Send
+              7
             </button>
+
+            <button
+              data-calculator="8"
+              type="button"
+            >
+              8
+            </button>
+
+            <button
+              data-calculator="9"
+              type="button"
+            >
+              9
+            </button>
+
+            <button
+              data-calculator="×"
+              type="button"
+              class="operator"
+            >
+              ×
+            </button>
+
+
+            <button
+              data-calculator="4"
+              type="button"
+            >
+              4
+            </button>
+
+            <button
+              data-calculator="5"
+              type="button"
+            >
+              5
+            </button>
+
+            <button
+              data-calculator="6"
+              type="button"
+            >
+              6
+            </button>
+
+            <button
+              data-calculator="-"
+              type="button"
+              class="operator"
+            >
+              −
+            </button>
+
+
+            <button
+              data-calculator="1"
+              type="button"
+            >
+              1
+            </button>
+
+            <button
+              data-calculator="2"
+              type="button"
+            >
+              2
+            </button>
+
+            <button
+              data-calculator="3"
+              type="button"
+            >
+              3
+            </button>
+
+            <button
+              data-calculator="+"
+              type="button"
+              class="operator"
+            >
+              +
+            </button>
+
+
+            <button
+              data-calculator="0"
+              type="button"
+            >
+              0
+            </button>
+
+            <button
+              data-calculator="."
+              type="button"
+            >
+              .
+            </button>
+
+            <button
+              data-calculator="="
+              type="button"
+              class="equals"
+              style="grid-column: span 2;"
+            >
+              =
+            </button>
+
+          </div>
 
         </div>
 
+      </section>
+
+
+      <!-- =================================================
+           SCIENTIFIC CALCULATOR
+           ================================================= -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Scientific Calculator</h2>
+
+        </div>
+
+        <div class="calculator">
+
+          <div class="angle-mode">
+
+            <button
+              id="angleModeButton"
+              type="button"
+            >
+              DEG
+            </button>
+
+          </div>
+
+          <div
+            id="scientificDisplay"
+            class="calculator-display"
+          >
+            0
+          </div>
+
+          <div class="calculator-grid scientific-grid">
+
+            <button
+              data-scientific="clear"
+              type="button"
+            >
+              C
+            </button>
+
+            <button
+              data-scientific="delete"
+              type="button"
+            >
+              DEL
+            </button>
+
+            <button
+              data-scientific="("
+              type="button"
+            >
+              (
+            </button>
+
+            <button
+              data-scientific=")"
+              type="button"
+            >
+              )
+            </button>
+
+            <button
+              data-scientific="÷"
+              type="button"
+              class="operator"
+            >
+              ÷
+            </button>
+
+
+            <button
+              data-scientific="sin"
+              type="button"
+            >
+              sin
+            </button>
+
+            <button
+              data-scientific="cos"
+              type="button"
+            >
+              cos
+            </button>
+
+            <button
+              data-scientific="tan"
+              type="button"
+            >
+              tan
+            </button>
+
+            <button
+              data-scientific="sqrt"
+              type="button"
+            >
+              √
+            </button>
+
+            <button
+              data-scientific="×"
+              type="button"
+              class="operator"
+            >
+              ×
+            </button>
+
+
+            <button
+              data-scientific="log"
+              type="button"
+            >
+              log
+            </button>
+
+            <button
+              data-scientific="ln"
+              type="button"
+            >
+              ln
+            </button>
+
+            <button
+              data-scientific="pi"
+              type="button"
+            >
+              π
+            </button>
+
+            <button
+              data-scientific="e"
+              type="button"
+            >
+              e
+            </button>
+
+            <button
+              data-scientific="-"
+              type="button"
+              class="operator"
+            >
+              −
+            </button>
+
+
+            <button
+              data-scientific="square"
+              type="button"
+            >
+              x²
+            </button>
+
+            <button
+              data-scientific="power"
+              type="button"
+            >
+              xʸ
+            </button>
+
+            <button
+              data-scientific="inverse"
+              type="button"
+            >
+              1/x
+            </button>
+
+            <button
+              data-scientific="%"
+              type="button"
+            >
+              %
+            </button>
+
+            <button
+              data-scientific="+"
+              type="button"
+              class="operator"
+            >
+              +
+            </button>
+
+
+            <button
+              data-scientific="7"
+              type="button"
+            >
+              7
+            </button>
+
+            <button
+              data-scientific="8"
+              type="button"
+            >
+              8
+            </button>
+
+            <button
+              data-scientific="9"
+              type="button"
+            >
+              9
+            </button>
+
+            <button
+              data-scientific="."
+              type="button"
+            >
+              .
+            </button>
+
+            <button
+              data-scientific="="
+              type="button"
+              class="equals"
+            >
+              =
+            </button>
+
+
+            <button
+              data-scientific="4"
+              type="button"
+            >
+              4
+            </button>
+
+            <button
+              data-scientific="5"
+              type="button"
+            >
+              5
+            </button>
+
+            <button
+              data-scientific="6"
+              type="button"
+            >
+              6
+            </button>
+
+            <button
+              data-scientific="1"
+              type="button"
+            >
+              1
+            </button>
+
+            <button
+              data-scientific="2"
+              type="button"
+            >
+              2
+            </button>
+
+
+            <button
+              data-scientific="3"
+              type="button"
+            >
+              3
+            </button>
+
+            <button
+              data-scientific="0"
+              type="button"
+            >
+              0
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+           TIMER
+           ================================================= -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Study Timer</h2>
+
+        </div>
+
+        <div class="timer-container">
+
+          <div id="timerDisplay">
+            00:00:00
+          </div>
+
+          <div
+            id="timerStatus"
+            class="timer-status"
+          >
+            Ready when you are.
+          </div>
+
+          <div class="timer-buttons">
+
+            <button
+              id="timerStart"
+              class="primary-button"
+              type="button"
+            >
+              Start
+            </button>
+
+            <button
+              id="timerReset"
+              class="action-button"
+              type="button"
+            >
+              Reset
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+           TRASH
+           ================================================= -->
+
+      <section class="dashboard-card">
+
+        <div class="card-header">
+
+          <h2>Trash</h2>
+
+          <div class="card-header-actions">
+
+            <button
+              id="emptyTrashButton"
+              class="small-button danger-button"
+              type="button"
+            >
+              Empty Trash
+            </button>
+
+          </div>
+
+        </div>
 
         <div
-            id="aiStatus"
-            class="ai-status"
-            aria-live="polite"
+          id="trashList"
+          class="card-body item-list"
         ></div>
 
-
-        <button
-            id="aiClearButton"
-            class="danger-link ai-clear-button"
-            type="button"
-        >
-            Clear conversation
-        </button>
+      </section>
 
     </section>
 
+  </main>
 
 
-    <!-- =====================================================
-         MAIN DASHBOARD
-    ====================================================== -->
+  <!-- =====================================================
+       MODAL
+       ===================================================== -->
 
-    <main class="dashboard-grid">
+  <div
+    id="modalOverlay"
+    aria-hidden="true"
+  >
 
+    <div class="modal">
 
-        <!-- =================================================
-             SUBJECTS
-        ================================================== -->
+      <div class="modal-header">
 
-        <section class="card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        SCHOOL
-                    </span>
-
-                    <h2>
-                        📚 My Subjects
-                    </h2>
-
-                </div>
-
-
-                <button
-                    id="addSubjectButton"
-                    class="text-button"
-                    type="button"
-                >
-                    + Add
-                </button>
-
-            </div>
-
-
-            <div
-                id="subjectsList"
-                class="items-list"
-            ></div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             TASKS
-        ================================================== -->
-
-        <section class="card card-wide">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        TO-DO
-                    </span>
-
-                    <h2>
-                        📝 My Tasks
-                    </h2>
-
-                </div>
-
-
-                <button
-                    id="addTaskButton"
-                    class="text-button"
-                    type="button"
-                >
-                    + Add
-                </button>
-
-            </div>
-
-
-            <div class="filter-row">
-
-
-                <button
-                    class="filter-button active"
-                    data-filter="all"
-                    type="button"
-                >
-                    All
-                </button>
-
-
-                <button
-                    class="filter-button"
-                    data-filter="pending"
-                    type="button"
-                >
-                    Pending
-                </button>
-
-
-                <button
-                    class="filter-button"
-                    data-filter="completed"
-                    type="button"
-                >
-                    Done
-                </button>
-
-
-                <button
-                    class="filter-button"
-                    data-filter="high"
-                    type="button"
-                >
-                    High Priority
-                </button>
-
-
-            </div>
-
-
-            <div
-                id="tasksList"
-                class="items-list"
-            ></div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             SCHEDULE
-        ================================================== -->
-
-        <section class="card card-wide">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        SCHOOL
-                    </span>
-
-                    <h2>
-                        🗓 Class Schedule
-                    </h2>
-
-                </div>
-
-
-                <button
-                    id="addScheduleButton"
-                    class="text-button"
-                    type="button"
-                >
-                    + Add
-                </button>
-
-            </div>
-
-
-            <div class="schedule-today">
-
-                <div class="schedule-today-header">
-
-                    <span>
-                        TODAY
-                    </span>
-
-                </div>
-
-
-                <div
-                    id="todayClasses"
-                    class="items-list"
-                ></div>
-
-            </div>
-
-
-            <div
-                id="scheduleList"
-                class="items-list schedule-list"
-            ></div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             DEADLINES
-        ================================================== -->
-
-        <section class="card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        CALENDAR
-                    </span>
-
-                    <h2>
-                        📅 Upcoming
-                    </h2>
-
-                </div>
-
-
-                <button
-                    id="addDeadlineButton"
-                    class="text-button"
-                    type="button"
-                >
-                    + Add
-                </button>
-
-            </div>
-
-
-            <div
-                id="deadlinesList"
-                class="items-list"
-            ></div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             NOTES
-        ================================================== -->
-
-        <section class="card card-wide notes-card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        NOTES
-                    </span>
-
-                    <h2>
-                        📓 My Notes
-                    </h2>
-
-                </div>
-
-
-                <button
-                    id="addNoteButton"
-                    class="text-button"
-                    type="button"
-                >
-                    + Add
-                </button>
-
-            </div>
-
-
-            <div class="notes-toolbar">
-
-
-                <select
-                    id="notesFolderFilter"
-                    class="notes-select"
-                >
-
-                    <option value="all">
-                        All folders
-                    </option>
-
-                </select>
-
-
-                <select
-                    id="notesSort"
-                    class="notes-select"
-                >
-
-                    <option value="updated">
-                        Recently updated
-                    </option>
-
-                    <option value="created">
-                        Recently created
-                    </option>
-
-                    <option value="az">
-                        A-Z
-                    </option>
-
-                    <option value="za">
-                        Z-A
-                    </option>
-
-                    <option value="pinned">
-                        Pinned first
-                    </option>
-
-                </select>
-
-
-                <button
-                    id="addFolderButton"
-                    class="secondary-button"
-                    type="button"
-                >
-                    + Folder
-                </button>
-
-
-                <button
-                    id="manageFoldersButton"
-                    class="secondary-button"
-                    type="button"
-                >
-                    Manage folders
-                </button>
-
-
-            </div>
-
-
-            <div
-                id="notesList"
-                class="notes-grid"
-            ></div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             SCHOOL LINKS
-        ================================================== -->
-
-        <section class="card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        RESOURCES
-                    </span>
-
-                    <h2>
-                        🔗 School Links
-                    </h2>
-
-                </div>
-
-
-                <button
-                    id="addLinkButton"
-                    class="text-button"
-                    type="button"
-                >
-                    + Add
-                </button>
-
-            </div>
-
-
-            <div
-                id="linksList"
-                class="items-list"
-            ></div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             REGULAR CALCULATOR
-        ================================================== -->
-
-        <section class="card calculator-card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        TOOLS
-                    </span>
-
-                    <h2>
-                        Calculator
-                    </h2>
-
-                </div>
-
-            </div>
-
-
-            <div class="calculator">
-
-                <div
-                    id="calculatorDisplay"
-                    class="calculator-display"
-                >
-                    0
-                </div>
-
-
-                <div class="calculator-grid">
-
-
-                    <button
-                        data-calculator="clear"
-                        type="button"
-                    >
-                        C
-                    </button>
-
-
-                    <button
-                        data-calculator="delete"
-                        type="button"
-                    >
-                        DEL
-                    </button>
-
-
-                    <button
-                        data-calculator="%"
-                        type="button"
-                    >
-                        %
-                    </button>
-
-
-                    <button
-                        data-calculator="/"
-                        class="operator-button"
-                        type="button"
-                    >
-                        ÷
-                    </button>
-
-
-                    <button
-                        data-calculator="7"
-                        type="button"
-                    >
-                        7
-                    </button>
-
-
-                    <button
-                        data-calculator="8"
-                        type="button"
-                    >
-                        8
-                    </button>
-
-
-                    <button
-                        data-calculator="9"
-                        type="button"
-                    >
-                        9
-                    </button>
-
-
-                    <button
-                        data-calculator="*"
-                        class="operator-button"
-                        type="button"
-                    >
-                        ×
-                    </button>
-
-
-                    <button
-                        data-calculator="4"
-                        type="button"
-                    >
-                        4
-                    </button>
-
-
-                    <button
-                        data-calculator="5"
-                        type="button"
-                    >
-                        5
-                    </button>
-
-
-                    <button
-                        data-calculator="6"
-                        type="button"
-                    >
-                        6
-                    </button>
-
-
-                    <button
-                        data-calculator="-"
-                        class="operator-button"
-                        type="button"
-                    >
-                        −
-                    </button>
-
-
-                    <button
-                        data-calculator="1"
-                        type="button"
-                    >
-                        1
-                    </button>
-
-
-                    <button
-                        data-calculator="2"
-                        type="button"
-                    >
-                        2
-                    </button>
-
-
-                    <button
-                        data-calculator="3"
-                        type="button"
-                    >
-                        3
-                    </button>
-
-
-                    <button
-                        data-calculator="+"
-                        class="operator-button"
-                        type="button"
-                    >
-                        +
-                    </button>
-
-
-                    <button
-                        data-calculator="0"
-                        class="zero-button"
-                        type="button"
-                    >
-                        0
-                    </button>
-
-
-                    <button
-                        data-calculator="."
-                        type="button"
-                    >
-                        .
-                    </button>
-
-
-                    <button
-                        data-calculator="="
-                        class="equals-button"
-                        type="button"
-                    >
-                        =
-                    </button>
-
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             SCIENTIFIC CALCULATOR
-        ================================================== -->
-
-        <section class="card calculator-card scientific-card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        TOOLS
-                    </span>
-
-                    <h2>
-                        Scientific Calculator
-                    </h2>
-
-                </div>
-
-
-                <button
-                    id="angleModeButton"
-                    class="secondary-button"
-                    type="button"
-                >
-                    DEG
-                </button>
-
-            </div>
-
-
-            <div class="scientific-calculator">
-
-
-                <div
-                    id="scientificDisplay"
-                    class="calculator-display"
-                >
-                    0
-                </div>
-
-
-                <div class="scientific-grid">
-
-
-                    <button
-                        data-scientific="sin"
-                        type="button"
-                    >
-                        sin
-                    </button>
-
-
-                    <button
-                        data-scientific="cos"
-                        type="button"
-                    >
-                        cos
-                    </button>
-
-
-                    <button
-                        data-scientific="tan"
-                        type="button"
-                    >
-                        tan
-                    </button>
-
-
-                    <button
-                        data-scientific="asin"
-                        type="button"
-                    >
-                        sin⁻¹
-                    </button>
-
-
-                    <button
-                        data-scientific="acos"
-                        type="button"
-                    >
-                        cos⁻¹
-                    </button>
-
-
-                    <button
-                        data-scientific="atan"
-                        type="button"
-                    >
-                        tan⁻¹
-                    </button>
-
-
-                    <button
-                        data-scientific="sqrt"
-                        type="button"
-                    >
-                        √
-                    </button>
-
-
-                    <button
-                        data-scientific="square"
-                        type="button"
-                    >
-                        x²
-                    </button>
-
-
-                    <button
-                        data-scientific="power"
-                        type="button"
-                    >
-                        xʸ
-                    </button>
-
-
-                    <button
-                        data-scientific="inverse"
-                        type="button"
-                    >
-                        1/x
-                    </button>
-
-
-                    <button
-                        data-scientific="pi"
-                        type="button"
-                    >
-                        π
-                    </button>
-
-
-                    <button
-                        data-scientific="e"
-                        type="button"
-                    >
-                        e
-                    </button>
-
-
-                    <button
-                        data-scientific="log"
-                        type="button"
-                    >
-                        log
-                    </button>
-
-
-                    <button
-                        data-scientific="ln"
-                        type="button"
-                    >
-                        ln
-                    </button>
-
-
-                    <button
-                        data-scientific="("
-                        type="button"
-                    >
-                        (
-                    </button>
-
-
-                    <button
-                        data-scientific=")"
-                        type="button"
-                    >
-                        )
-                    </button>
-
-
-                    <button
-                        data-scientific="clear"
-                        type="button"
-                    >
-                        C
-                    </button>
-
-
-                    <button
-                        data-scientific="delete"
-                        type="button"
-                    >
-                        DEL
-                    </button>
-
-
-                    <button
-                        data-scientific="="
-                        class="equals-button"
-                        type="button"
-                    >
-                        =
-                    </button>
-
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             STUDY TIMER
-        ================================================== -->
-
-        <section class="card timer-card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        FOCUS
-                    </span>
-
-                    <h2>
-                        ⏱ Study Timer
-                    </h2>
-
-                    <p class="card-subtitle">
-                        Study at your own pace.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="timer">
-
-
-                <div
-                    id="timerDisplay"
-                    class="timer-display"
-                >
-                    00:00:00
-                </div>
-
-
-                <p
-                    id="timerStatus"
-                    class="timer-status"
-                >
-                    Ready to study
-                </p>
-
-
-                <div class="timer-controls">
-
-
-                    <button
-                        id="timerStart"
-                        class="primary-button"
-                        type="button"
-                    >
-                        Start
-                    </button>
-
-
-                    <button
-                        id="timerReset"
-                        class="secondary-button"
-                        type="button"
-                    >
-                        Reset
-                    </button>
-
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             TRASH
-        ================================================== -->
-
-        <section class="card card-wide trash-card">
-
-            <div class="card-header">
-
-                <div>
-
-                    <span class="section-label">
-                        RECYCLE BIN
-                    </span>
-
-                    <h2>
-                        🗑 Recently Deleted
-                    </h2>
-
-                    <p class="card-subtitle">
-                        Restore something you deleted or remove it permanently.
-                    </p>
-
-                </div>
-
-
-                <button
-                    id="emptyTrashButton"
-                    class="secondary-button"
-                    type="button"
-                >
-                    Empty Trash
-                </button>
-
-            </div>
-
-
-            <div
-                id="trashList"
-                class="items-list"
-            ></div>
-
-        </section>
-
-
-    </main>
-
-
-
-    <!-- =====================================================
-         FOOTER
-    ====================================================== -->
-
-    <footer>
-
-        <p>
-            Made for getting things done.
-        </p>
-
+        <h2 id="modalTitle">
+          Add Item
+        </h2>
 
         <button
-            id="clearAllButton"
-            class="danger-link"
-            type="button"
+          id="modalClose"
+          type="button"
+          aria-label="Close"
         >
-            Clear all data
+          ×
         </button>
 
-    </footer>
+      </div>
 
 
-</div>
+      <form id="modalForm">
 
+        <div id="modalFields"></div>
 
+        <div class="modal-footer">
 
-<!-- =========================================================
-     MODAL
-========================================================== -->
+          <button
+            id="modalCancel"
+            class="action-button"
+            type="button"
+          >
+            Cancel
+          </button>
 
-<div
-    id="modalOverlay"
-    class="modal-overlay hidden"
->
-
-    <div
-        class="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modalTitle"
-    >
-
-        <div class="modal-header">
-
-            <h2 id="modalTitle">
-                Add Item
-            </h2>
-
-
-            <button
-                id="modalClose"
-                class="modal-close"
-                type="button"
-                aria-label="Close"
-            >
-                ×
-            </button>
+          <button
+            class="primary-button action-button"
+            type="submit"
+          >
+            Save
+          </button>
 
         </div>
 
-
-        <form id="modalForm">
-
-            <div id="modalFields"></div>
-
-
-            <div class="modal-actions">
-
-                <button
-                    id="modalCancel"
-                    class="secondary-button"
-                    type="button"
-                >
-                    Cancel
-                </button>
-
-
-                <button
-                    class="primary-button"
-                    type="submit"
-                >
-                    Save
-                </button>
-
-            </div>
-
-        </form>
+      </form>
 
     </div>
 
-</div>
+  </div>
 
 
+  <!-- =====================================================
+       TOAST
+       ===================================================== -->
 
-<!-- =========================================================
-     TOAST
-========================================================== -->
-
-<div
+  <div
     id="toast"
-    class="toast"
+    role="status"
     aria-live="polite"
-></div>
+  ></div>
 
 
+  <!-- =====================================================
+       FOOTER
+       ===================================================== -->
 
-<!-- =========================================================
-     JAVASCRIPT
-========================================================== -->
+  <footer>
 
-<script src="script.js"></script>
+    <div>
+      Due Tomorrow, Do Tomorrow
+    </div>
+
+    <button
+      id="clearAllButton"
+      type="button"
+    >
+      Clear all local data
+    </button>
+
+  </footer>
+
+
+  <!-- =====================================================
+       JAVASCRIPT
+       ===================================================== -->
+
+  <script src="script.js"></script>
 
 </body>
-
 </html>
