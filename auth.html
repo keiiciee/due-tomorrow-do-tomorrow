@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Purple Study Hub — Account</title>
+
+    <link rel="icon" href="./purple-study-hub-favicon.png?v=1" type="image/png">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f7f2fc;
+            color: #3f3450;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 35px 30px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 12px 35px rgba(90, 60, 120, 0.12);
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            margin: 0;
+            text-align: center;
+            color: #8064a2;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin: 8px 0 28px;
+            color: #766b80;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 10px;
+            background: #f0e9f7;
+            color: #665375;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: #8064a2;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid #ddd3e7;
+            border-radius: 10px;
+            outline: none;
+            font-size: 15px;
+        }
+
+        input:focus {
+            border-color: #8064a2;
+        }
+
+        .main-button {
+            width: 100%;
+            border: none;
+            padding: 13px;
+            border-radius: 10px;
+            background: #8064a2;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        .main-button:hover {
+            opacity: 0.92;
+        }
+
+        .message {
+            min-height: 22px;
+            margin-top: 16px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 22px;
+            text-align: center;
+            color: #8064a2;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="auth-card">
+
+        <div class="logo">💜</div>
+
+        <h1>Purple Study Hub</h1>
+
+        <p class="subtitle">
+            Your little space for school
+        </p>
+
+        <div class="tabs">
+            <button
+                id="loginTab"
+                class="tab active"
+                type="button"
+            >
+                Log In
+            </button>
+
+            <button
+                id="signupTab"
+                class="tab"
+                type="button"
+            >
+                Sign Up
+            </button>
+        </div>
+
+        <form id="authForm">
+
+            <div
+                id="nameGroup"
+                class="form-group hidden"
+            >
+                <label for="displayName">
+                    Name
+                </label>
+
+                <input
+                    id="displayName"
+                    type="text"
+                    placeholder="Your name"
+                    autocomplete="name"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="email">
+                    Email
+                </label>
+
+                <input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    autocomplete="email"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    Password
+                </label>
+
+                <input
+                    id="password"
+                    type="password"
+                    placeholder="Your password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button
+                id="submitButton"
+                class="main-button"
+                type="submit"
+            >
+                Log In
+            </button>
+
+        </form>
+
+        <div
+            id="message"
+            class="message"
+        ></div>
+
+        <a
+            href="./index.html"
+            class="back-link"
+        >
+            ← Back to Study Hub
+        </a>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const SUPABASE_URL = "https://heypuhrbvincoyawpktw.supabase.co";
+        const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_OT5GgrGXzqJpHf3LyIDmbg_-7eFqtXL";
+
+        const supabase = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+        );
+
+        let mode = "login";
+
+        const loginTab = document.getElementById("loginTab");
+        const signupTab = document.getElementById("signupTab");
+        const nameGroup = document.getElementById("nameGroup");
+        const displayName = document.getElementById("displayName");
+        const authForm = document.getElementById("authForm");
+        const submitButton = document.getElementById("submitButton");
+        const message = document.getElementById("message");
+
+        function setMode(newMode) {
+            mode = newMode;
+
+            message.textContent = "";
+
+            if (mode === "signup") {
+                loginTab.classList.remove("active");
+                signupTab.classList.add("active");
+
+                nameGroup.classList.remove("hidden");
+                displayName.required = true;
+
+                submitButton.textContent = "Create Account";
+            } else {
+                signupTab.classList.remove("active");
+                loginTab.classList.add("active");
+
+                nameGroup.classList.add("hidden");
+                displayName.required = false;
+
+                submitButton.textContent = "Log In";
+            }
+        }
+
+        loginTab.addEventListener("click", function() {
+            setMode("login");
+        });
+
+        signupTab.addEventListener("click", function() {
+            setMode("signup");
+        });
+
+        authForm.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const email = document
+                .getElementById("email")
+                .value
+                .trim();
+
+            const password = document
+                .getElementById("password")
+                .value;
+
+            const name = displayName
+                .value
+                .trim();
+
+            message.textContent = "Please wait...";
+
+            submitButton.disabled = true;
+
+            try {
+
+                if (mode === "signup") {
+
+                    const { error } = await supabase.auth.signUp({
+                        email: email,
+                        password: password,
+                        options: {
+                            data: {
+                                display_name: name
+                            }
+                        }
+                    });
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    message.textContent =
+                        "Account created! Check your email to confirm your account.";
+
+                    authForm.reset();
+
+                } else {
+
+                    const { error } =
+                        await supabase.auth.signInWithPassword({
+                            email: email,
+                            password: password
+                        });
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    window.location.href = "./index.html";
+                }
+
+            } catch (error) {
+
+                message.textContent =
+                    error.message || "Something went wrong.";
+
+            } finally {
+
+                submitButton.disabled = false;
+
+            }
+        });
+    </script>
+
+</body>
+</html>
