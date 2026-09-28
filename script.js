@@ -1,3544 +1,2796 @@
 /* =========================================================
-   PURPLE STUDY HUB
-   Complete Study Dashboard
-========================================================= */
+   DUE TOMORROW, DO TOMORROW
+   A little space to get things done
+   ========================================================= */
 
+document.addEventListener("DOMContentLoaded", () => {
+    "use strict";
 
-/* =========================================================
-   SUPABASE
-========================================================= */
+    /* =========================================================
+       STORAGE
+       ========================================================= */
 
-const SUPABASE_URL =
-    "https://heypuhrbvincoyawpktw.supabase.co";
+    const STORAGE_KEY = "dueTomorrowData";
 
-const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_OT5GgrGXzqJpHf3LyIDmbg_-7eFqtXL";
+    const defaultData = {
+        theme: "lavender",
+        darkMode: false,
 
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_PUBLISHABLE_KEY
-    );
+        subjects: [],
+        tasks: [],
+        deadlines: [],
+        schedule: [],
+        notes: [],
+        folders: [
+            {
+                id: "unfiled",
+                name: "Unfiled"
+            }
+        ],
+        links: [],
 
-console.log(
-    "Supabase connected:",
-    supabaseClient
-);
+        trash: [],
 
+        timerSeconds: 0
+    };
 
-/* =========================================================
-   STORAGE
-========================================================= */
+    let data = loadData();
 
-const STORAGE_KEY =
-    "purpleStudyHubData";
+    function loadData() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
 
-const THEME_KEY =
-    "purpleStudyHubTheme";
+            if (!saved) {
+                return structuredClone(defaultData);
+            }
 
+            const parsed = JSON.parse(saved);
 
-let data = {
-    subjects: [],
-    tasks: [],
-    deadlines: [],
-    links: []
-};
-
-
-let currentFilter = "all";
-let currentSearch = "";
-
-
-/* =========================================================
-   DOM HELPER
-========================================================= */
-
-function $(selector) {
-    return document.querySelector(selector);
-}
-
-
-/* =========================================================
-   SAFE HTML
-========================================================= */
-
-function escapeHTML(value) {
-
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-
-/* =========================================================
-   ID
-========================================================= */
-
-function createId() {
-
-    if (
-        window.crypto &&
-        typeof window.crypto.randomUUID === "function"
-    ) {
-        return window.crypto.randomUUID();
+            return {
+                ...structuredClone(defaultData),
+                ...parsed,
+                subjects: parsed.subjects || [],
+                tasks: parsed.tasks || [],
+                deadlines: parsed.deadlines || [],
+                schedule: parsed.schedule || [],
+                notes: parsed.notes || [],
+                folders: parsed.folders?.length
+                    ? parsed.folders
+                    : [{ id: "unfiled", name: "Unfiled" }],
+                links: parsed.links || [],
+                trash: parsed.trash || []
+            };
+        } catch (error) {
+            console.error("Could not load saved data:", error);
+            return structuredClone(defaultData);
+        }
     }
 
-    return (
-        Date.now().toString(36) +
-        Math.random().toString(36).slice(2)
-    );
-}
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
 
+    function generateId(prefix = "item") {
+        return (
+            prefix +
+            "_" +
+            Date.now().toString(36) +
+            "_" +
+            Math.random().toString(36).slice(2, 8)
+        );
+    }
 
-/* =========================================================
-   LOAD DATA
-========================================================= */
+    /* =========================================================
+       ELEMENT HELPERS
+       ========================================================= */
 
-function loadData() {
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => document.querySelectorAll(selector);
 
-    try {
+    function escapeHTML(value) {
+        if (value === null || value === undefined) return "";
 
-        const saved =
-            localStorage.getItem(
-                STORAGE_KEY
-            );
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
 
-        if (!saved) {
-            return;
+    function formatDate(dateString) {
+        if (!dateString) return "No date";
+
+        const date = new Date(dateString + "T00:00:00");
+
+        if (Number.isNaN(date.getTime())) {
+            return dateString;
         }
 
-        const parsed =
-            JSON.parse(saved);
-
-        data = {
-
-            subjects:
-                Array.isArray(parsed.subjects)
-                    ? parsed.subjects
-                    : [],
-
-            tasks:
-                Array.isArray(parsed.tasks)
-                    ? parsed.tasks
-                    : [],
-
-            deadlines:
-                Array.isArray(parsed.deadlines)
-                    ? parsed.deadlines
-                    : [],
-
-            links:
-                Array.isArray(parsed.links)
-                    ? parsed.links
-                    : []
-
-        };
-
-    } catch (error) {
-
-        console.error(
-            "Could not load saved data:",
-            error
-        );
-
-    }
-}
-
-
-/* =========================================================
-   SAVE DATA
-========================================================= */
-
-function saveData() {
-
-    try {
-
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(data)
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Could not save data:",
-            error
-        );
-
-        showToast(
-            "Your browser could not save the data."
-        );
-    }
-}
-
-
-/* =========================================================
-   TOAST
-========================================================= */
-
-let toastTimer = null;
-
-
-function showToast(message) {
-
-    const toast =
-        $("#toast");
-
-    if (!toast) {
-        return;
-    }
-
-    toast.textContent =
-        message;
-
-    toast.classList.add(
-        "show"
-    );
-
-    clearTimeout(
-        toastTimer
-    );
-
-    toastTimer =
-        setTimeout(
-            function() {
-
-                toast.classList.remove(
-                    "show"
-                );
-
-            },
-            2200
-        );
-}
-
-
-/* =========================================================
-   DATE HELPERS
-========================================================= */
-
-function todayString() {
-
-    const date =
-        new Date();
-
-    const year =
-        date.getFullYear();
-
-    const month =
-        String(
-            date.getMonth() + 1
-        ).padStart(2, "0");
-
-    const day =
-        String(
-            date.getDate()
-        ).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-}
-
-
-function formatDate(dateString) {
-
-    if (!dateString) {
-        return "";
-    }
-
-    const date =
-        new Date(
-            dateString +
-            "T00:00:00"
-        );
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return dateString;
-    }
-
-    return date.toLocaleDateString(
-        undefined,
-        {
+        return date.toLocaleDateString("en-PH", {
             month: "short",
             day: "numeric",
             year: "numeric"
+        });
+    }
+
+    function formatTime(time) {
+        if (!time) return "";
+
+        const [hourString, minute] = time.split(":");
+        let hour = Number(hourString);
+
+        const suffix = hour >= 12 ? "PM" : "AM";
+
+        hour = hour % 12;
+        if (hour === 0) hour = 12;
+
+        return `${hour}:${minute} ${suffix}`;
+    }
+
+    function todayISO() {
+        const now = new Date();
+
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
+
+    function showToast(message) {
+        const toast = $("#toast");
+
+        if (!toast) return;
+
+        toast.textContent = message;
+        toast.classList.add("show");
+
+        clearTimeout(showToast.timeout);
+
+        showToast.timeout = setTimeout(() => {
+            toast.classList.remove("show");
+        }, 2500);
+    }
+
+    /* =========================================================
+       THEME
+       ========================================================= */
+
+    function applyTheme() {
+        document.body.dataset.theme = data.theme || "lavender";
+
+        if (data.darkMode) {
+            document.body.classList.add("dark-mode");
+        } else {
+            document.body.classList.remove("dark-mode");
         }
-    );
-}
 
-
-function isOverdue(dateString) {
-
-    return Boolean(
-        dateString &&
-        dateString < todayString()
-    );
-}
-
-
-function isToday(dateString) {
-
-    return (
-        dateString ===
-        todayString()
-    );
-}
-
-
-/* =========================================================
-   GREETING
-========================================================= */
-
-function updateGreeting() {
-
-    const greetingElement =
-        $("#greeting");
-
-    if (!greetingElement) {
-        return;
-    }
-
-    const hour =
-        new Date().getHours();
-
-    let greeting =
-        "Welcome back!";
-
-    if (hour < 12) {
-
-        greeting =
-            "Good morning!";
-
-    } else if (hour < 18) {
-
-        greeting =
-            "Good afternoon!";
-
-    } else {
-
-        greeting =
-            "Good evening!";
-    }
-
-    greetingElement.textContent =
-        greeting;
-}
-
-
-/* =========================================================
-   MODAL
-========================================================= */
-
-let modalSubmit = null;
-
-
-function openModal(
-    title,
-    fields,
-    submitFunction
-) {
-
-    const overlay =
-        $("#modalOverlay");
-
-    const titleElement =
-        $("#modalTitle");
-
-    const fieldsElement =
-        $("#modalFields");
-
-    if (
-        !overlay ||
-        !titleElement ||
-        !fieldsElement
-    ) {
-        return;
-    }
-
-    titleElement.textContent =
-        title;
-
-    fieldsElement.innerHTML =
-        fields;
-
-    modalSubmit =
-        submitFunction;
-
-    overlay.classList.remove(
-        "hidden"
-    );
-
-    setTimeout(
-        function() {
-
-            const firstInput =
-                fieldsElement.querySelector(
-                    "input, select, textarea"
-                );
-
-            if (firstInput) {
-                firstInput.focus();
-            }
-
-        },
-        50
-    );
-}
-
-
-function closeModal() {
-
-    const overlay =
-        $("#modalOverlay");
-
-    const fields =
-        $("#modalFields");
-
-    if (overlay) {
-
-        overlay.classList.add(
-            "hidden"
-        );
-    }
-
-    if (fields) {
-
-        fields.innerHTML =
-            "";
-    }
-
-    modalSubmit =
-        null;
-}
-
-
-function setupModalEvents() {
-
-    const closeButton =
-        $("#modalClose");
-
-    const cancelButton =
-        $("#modalCancel");
-
-    const overlay =
-        $("#modalOverlay");
-
-    const form =
-        $("#modalForm");
-
-
-    if (closeButton) {
-
-        closeButton.addEventListener(
-            "click",
-            closeModal
-        );
-    }
-
-
-    if (cancelButton) {
-
-        cancelButton.addEventListener(
-            "click",
-            closeModal
-        );
-    }
-
-
-    if (overlay) {
-
-        overlay.addEventListener(
-            "click",
-            function(event) {
-
-                if (
-                    event.target ===
-                    overlay
-                ) {
-                    closeModal();
-                }
-
-            }
-        );
-    }
-
-
-    if (form) {
-
-        form.addEventListener(
-            "submit",
-            function(event) {
-
-                event.preventDefault();
-
-                if (
-                    typeof modalSubmit ===
-                    "function"
-                ) {
-
-                    const success =
-                        modalSubmit();
-
-                    if (success) {
-                        closeModal();
-                    }
-                }
-
-            }
-        );
-    }
-
-
-    document.addEventListener(
-        "keydown",
-        function(event) {
-
-            if (
-                event.key ===
-                "Escape"
-            ) {
-
-                const overlay =
-                    $("#modalOverlay");
-
-                if (
-                    overlay &&
-                    !overlay.classList.contains(
-                        "hidden"
-                    )
-                ) {
-                    closeModal();
-                }
-            }
-
+        $$(".theme-option").forEach(option => {
+            option.classList.toggle(
+                "active",
+                option.dataset.theme === data.theme
+            );
+        });
+
+        const darkButton = $("#darkModeButton");
+
+        if (darkButton) {
+            darkButton.setAttribute(
+                "aria-label",
+                data.darkMode ? "Turn off dark mode" : "Turn on dark mode"
+            );
+
+            darkButton.textContent = data.darkMode
+                ? "☀️"
+                : "🌙";
         }
-    );
-}
+    }
 
+    function setupTheme() {
+        applyTheme();
 
-/* =========================================================
-   SUBJECTS
-========================================================= */
+        const themeButton = $("#themeButton");
+        const themePanel = $("#themePanel");
 
-function openSubjectModal() {
+        themeButton?.addEventListener("click", (event) => {
+            event.stopPropagation();
 
-    openModal(
-        "Add Subject",
+            themePanel?.classList.toggle("open");
+        });
 
-        `
-        <div class="form-group">
+        $$(".theme-option").forEach(option => {
+            option.addEventListener("click", () => {
+                data.theme = option.dataset.theme || "lavender";
 
-            <label for="subjectName">
-                Subject name
-            </label>
+                saveData();
+                applyTheme();
 
-            <input
-                id="subjectName"
-                type="text"
-                placeholder="e.g. General Mathematics"
-                maxlength="80"
-                required
-            >
+                themePanel?.classList.remove("open");
 
-        </div>
-        `,
-
-        function() {
-
-            const input =
-                $("#subjectName");
-
-            const name =
-                input
-                    ? input.value.trim()
-                    : "";
-
-            if (!name) {
-
-                showToast(
-                    "Please enter a subject."
-                );
-
-                return false;
-            }
-
-            data.subjects.push({
-
-                id:
-                    createId(),
-
-                name:
-                    name,
-
-                createdAt:
-                    new Date().toISOString()
-
+                showToast("Theme changed.");
             });
+        });
+
+        $("#darkModeButton")?.addEventListener("click", () => {
+            data.darkMode = !data.darkMode;
 
             saveData();
+            applyTheme();
+        });
 
-            renderAll();
+        document.addEventListener("click", (event) => {
+            if (
+                themePanel &&
+                !themePanel.contains(event.target) &&
+                event.target !== themeButton
+            ) {
+                themePanel.classList.remove("open");
+            }
+        });
+    }
 
-            showToast(
-                "Subject added."
-            );
+    /* =========================================================
+       WELCOME MESSAGE
+       ========================================================= */
 
-            return true;
+    function updateWelcome() {
+        const welcome = $("#welcomeText");
+
+        if (!welcome) return;
+
+        const hour = new Date().getHours();
+
+        let greeting = "Good evening";
+
+        if (hour < 12) {
+            greeting = "Good morning";
+        } else if (hour < 18) {
+            greeting = "Good afternoon";
         }
-    );
-}
 
-
-function countTasksForSubject(
-    subjectName
-) {
-
-    return data.tasks.filter(
-        function(task) {
-
-            return (
-                task.subject ===
-                subjectName
-            );
-
-        }
-    ).length;
-}
-
-
-function renderSubjects() {
-
-    const list =
-        $("#subjectsList");
-
-    if (!list) {
-        return;
+        welcome.textContent = greeting + "!";
     }
 
-    list.innerHTML =
-        "";
+    /* =========================================================
+       SUBJECTS
+       ========================================================= */
 
-    const stat =
-        $("#statSubjects");
+    function renderSubjects() {
+        const container = $("#subjectsList");
 
-    if (stat) {
+        if (!container) return;
 
-        stat.textContent =
-            data.subjects.length;
-    }
-
-
-    let subjects =
-        [...data.subjects];
-
-
-    if (currentSearch) {
-
-        subjects =
-            subjects.filter(
-                function(subject) {
-
-                    return subject.name
-                        .toLowerCase()
-                        .includes(
-                            currentSearch
-                        );
-
-                }
-            );
-    }
-
-
-    if (
-        subjects.length ===
-        0
-    ) {
-
-        list.innerHTML = `
-            <p class="empty">
-                No subjects yet.<br>
-                Add your first subject.
-            </p>
-        `;
-
-        return;
-    }
-
-
-    subjects.forEach(
-        function(subject) {
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "item";
-
-            item.innerHTML = `
-
-                <div class="item-main">
-
-                    <p class="item-title">
-                        📖
-                        ${escapeHTML(
-                            subject.name
-                        )}
-                    </p>
-
-                    <p class="item-subtitle">
-                        ${countTasksForSubject(
-                            subject.name
-                        )}
-                        task(s)
-                    </p>
-
-                </div>
-
-                <div class="item-actions">
-
-                    <button
-                        class="small-button delete-button"
-                        type="button"
-                        data-action="delete-subject"
-                        data-id="${subject.id}"
-                    >
-                        Delete
+        if (!data.subjects.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📚</div>
+                    <p>No subjects yet.</p>
+                    <button class="small-button" data-action="add-subject">
+                        Add a subject
                     </button>
-
                 </div>
-
-            `;
-
-            list.appendChild(
-                item
-            );
-        }
-    );
-}
-
-
-function deleteSubject(id) {
-
-    const subject =
-        data.subjects.find(
-            function(item) {
-
-                return item.id === id;
-
-            }
-        );
-
-    if (!subject) {
-        return;
-    }
-
-    const taskCount =
-        countTasksForSubject(
-            subject.name
-        );
-
-    let message =
-        `Delete "${subject.name}"?`;
-
-    if (taskCount > 0) {
-
-        message +=
-            `\n\n${taskCount} task(s) use this subject.`;
-    }
-
-    if (!confirm(message)) {
-        return;
-    }
-
-    data.subjects =
-        data.subjects.filter(
-            function(item) {
-
-                return item.id !== id;
-
-            }
-        );
-
-    saveData();
-
-    renderAll();
-
-    showToast(
-        "Subject deleted."
-    );
-}
-
-
-/* =========================================================
-   TASKS
-========================================================= */
-
-function openTaskModal() {
-
-    let subjectOptions =
-        data.subjects
-            .map(
-                function(subject) {
-
-                    return `
-                        <option value="${escapeHTML(
-                            subject.name
-                        )}">
-                            ${escapeHTML(
-                                subject.name
-                            )}
-                        </option>
-                    `;
-
-                }
-            )
-            .join("");
-
-
-    openModal(
-        "Add Task",
-
-        `
-        <div class="form-group">
-
-            <label for="taskTitle">
-                Task or assignment
-            </label>
-
-            <input
-                id="taskTitle"
-                type="text"
-                placeholder="e.g. Finish Module 6"
-                maxlength="120"
-                required
-            >
-
-        </div>
-
-
-        <div class="form-group">
-
-            <label for="taskSubject">
-                Subject
-            </label>
-
-            <select id="taskSubject">
-
-                <option value="">
-                    No subject
-                </option>
-
-                ${subjectOptions}
-
-            </select>
-
-        </div>
-
-
-        <div class="form-group">
-
-            <label for="taskPriority">
-                Priority
-            </label>
-
-            <select id="taskPriority">
-
-                <option value="low">
-                    Low
-                </option>
-
-                <option
-                    value="medium"
-                    selected
-                >
-                    Medium
-                </option>
-
-                <option value="high">
-                    High
-                </option>
-
-            </select>
-
-        </div>
-
-
-        <div class="form-group">
-
-            <label for="taskDueDate">
-                Due date
-            </label>
-
-            <input
-                id="taskDueDate"
-                type="date"
-            >
-
-        </div>
-        `,
-
-        function() {
-
-            const title =
-                $("#taskTitle")
-                    ?.value
-                    .trim() || "";
-
-            const subject =
-                $("#taskSubject")
-                    ?.value || "";
-
-            const priority =
-                $("#taskPriority")
-                    ?.value || "medium";
-
-            const dueDate =
-                $("#taskDueDate")
-                    ?.value || "";
-
-
-            if (!title) {
-
-                showToast(
-                    "Please enter a task."
-                );
-
-                return false;
-            }
-
-
-            data.tasks.unshift({
-
-                id:
-                    createId(),
-
-                title:
-                    title,
-
-                subject:
-                    subject,
-
-                priority:
-                    priority,
-
-                dueDate:
-                    dueDate,
-
-                completed:
-                    false,
-
-                createdAt:
-                    new Date().toISOString()
-
-            });
-
-
-            saveData();
-
-            renderAll();
-
-            showToast(
-                "Task added."
-            );
-
-            return true;
-        }
-    );
-}
-
-
-function renderTasks() {
-
-    const list =
-        $("#tasksList");
-
-    if (!list) {
-        return;
-    }
-
-    list.innerHTML =
-        "";
-
-
-    let tasks =
-        [...data.tasks];
-
-
-    if (
-        currentFilter ===
-        "pending"
-    ) {
-
-        tasks =
-            tasks.filter(
-                function(task) {
-
-                    return !task.completed;
-
-                }
-            );
-    }
-
-
-    if (
-        currentFilter ===
-        "completed"
-    ) {
-
-        tasks =
-            tasks.filter(
-                function(task) {
-
-                    return task.completed;
-
-                }
-            );
-    }
-
-
-    if (
-        currentFilter ===
-        "high"
-    ) {
-
-        tasks =
-            tasks.filter(
-                function(task) {
-
-                    return (
-                        task.priority ===
-                        "high" &&
-                        !task.completed
-                    );
-
-                }
-            );
-    }
-
-
-    if (currentSearch) {
-
-        tasks =
-            tasks.filter(
-                function(task) {
-
-                    const text =
-                        (
-                            task.title +
-                            " " +
-                            task.subject +
-                            " " +
-                            task.priority
-                        )
-                            .toLowerCase();
-
-                    return text.includes(
-                        currentSearch
-                    );
-
-                }
-            );
-    }
-
-
-    tasks.sort(
-        function(a, b) {
-
-            if (
-                a.completed !==
-                b.completed
-            ) {
-
-                return a.completed
-                    ? 1
-                    : -1;
-            }
-
-
-            if (
-                a.dueDate &&
-                b.dueDate
-            ) {
-
-                return a.dueDate
-                    .localeCompare(
-                        b.dueDate
-                    );
-            }
-
-
-            if (a.dueDate) {
-                return -1;
-            }
-
-            if (b.dueDate) {
-                return 1;
-            }
-
-            return 0;
-
-        }
-    );
-
-
-    if (
-        tasks.length ===
-        0
-    ) {
-
-        list.innerHTML = `
-            <p class="empty">
-                No tasks found.
-            </p>
-        `;
-
-        updateStats();
-
-        return;
-    }
-
-
-    tasks.forEach(
-        function(task) {
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-
-            let priorityClass =
-                "priority-" +
-                (
-                    task.priority ||
-                    "medium"
-                );
-
-
-            item.className =
-                `item ${priorityClass}
-                ${task.completed ? "completed" : ""}
-                ${
-                    isOverdue(
-                        task.dueDate
-                    ) &&
-                    !task.completed
-                        ? "overdue"
-                        : ""
-                }`;
-
-
-            let dateText =
-                "";
-
-
-            if (task.dueDate) {
-
-                if (
-                    isToday(
-                        task.dueDate
-                    )
-                ) {
-
-                    dateText =
-                        "Due today";
-
-                } else if (
-                    isOverdue(
-                        task.dueDate
-                    ) &&
-                    !task.completed
-                ) {
-
-                    dateText =
-                        `Overdue · ${formatDate(
-                            task.dueDate
-                        )}`;
-
-                } else {
-
-                    dateText =
-                        `Due ${formatDate(
-                            task.dueDate
-                        )}`;
-                }
-            }
-
-
-            let priorityBadge =
-                "";
-
-
-            if (
-                task.priority ===
-                "high"
-            ) {
-
-                priorityBadge = `
-                    <span class="badge badge-high">
-                        HIGH
-                    </span>
-                `;
-
-            } else if (
-                task.priority ===
-                "medium"
-            ) {
-
-                priorityBadge = `
-                    <span class="badge">
-                        MEDIUM
-                    </span>
-                `;
-            }
-
-
-            item.innerHTML = `
-
-                <div class="item-main">
-
-                    <p class="item-title">
-                        ${escapeHTML(
-                            task.title
-                        )}
-                    </p>
-
-                    ${
-                        task.subject
-                            ? `
-                                <p class="item-subtitle">
-                                    ${escapeHTML(
-                                        task.subject
-                                    )}
-                                </p>
-                              `
-                            : ""
-                    }
-
-                    ${
-                        dateText
-                            ? `
-                                <p class="item-subtitle">
-                                    ${escapeHTML(
-                                        dateText
-                                    )}
-                                </p>
-                              `
-                            : ""
-                    }
-
-                    ${priorityBadge}
-
-                </div>
-
-
-                <div class="item-actions">
-
-                    <button
-                        class="small-button"
-                        type="button"
-                        data-action="toggle-task"
-                        data-id="${task.id}"
-                    >
-                        ${
-                            task.completed
-                                ? "Undo"
-                                : "Done"
-                        }
-                    </button>
-
-                    <button
-                        class="small-button delete-button"
-                        type="button"
-                        data-action="delete-task"
-                        data-id="${task.id}"
-                    >
-                        Delete
-                    </button>
-
-                </div>
-
-            `;
-
-            list.appendChild(
-                item
-            );
-        }
-    );
-
-
-    updateStats();
-}
-
-
-function toggleTask(id) {
-
-    const task =
-        data.tasks.find(
-            function(item) {
-
-                return item.id === id;
-
-            }
-        );
-
-    if (!task) {
-        return;
-    }
-
-    task.completed =
-        !task.completed;
-
-    saveData();
-
-    renderAll();
-
-    showToast(
-        task.completed
-            ? "Task completed! 💜"
-            : "Task moved back to pending."
-    );
-}
-
-
-function deleteTask(id) {
-
-    const task =
-        data.tasks.find(
-            function(item) {
-
-                return item.id === id;
-
-            }
-        );
-
-    if (!task) {
-        return;
-    }
-
-    if (
-        !confirm(
-            `Delete "${task.title}"?`
-        )
-    ) {
-        return;
-    }
-
-    data.tasks =
-        data.tasks.filter(
-            function(item) {
-
-                return item.id !== id;
-
-            }
-        );
-
-    saveData();
-
-    renderAll();
-
-    showToast(
-        "Task deleted."
-    );
-}
-
-
-/* =========================================================
-   DEADLINES
-========================================================= */
-
-function openDeadlineModal() {
-
-    openModal(
-        "Add Deadline",
-
-        `
-        <div class="form-group">
-
-            <label for="deadlineTitle">
-                Event or deadline
-            </label>
-
-            <input
-                id="deadlineTitle"
-                type="text"
-                placeholder="e.g. Philosophy Performance Task"
-                maxlength="120"
-                required
-            >
-
-        </div>
-
-
-        <div class="form-group">
-
-            <label for="deadlineDate">
-                Date
-            </label>
-
-            <input
-                id="deadlineDate"
-                type="date"
-                required
-            >
-
-        </div>
-        `,
-
-        function() {
-
-            const title =
-                $("#deadlineTitle")
-                    ?.value
-                    .trim() || "";
-
-            const date =
-                $("#deadlineDate")
-                    ?.value || "";
-
-
-            if (
-                !title ||
-                !date
-            ) {
-
-                showToast(
-                    "Please complete the deadline details."
-                );
-
-                return false;
-            }
-
-
-            data.deadlines.push({
-
-                id:
-                    createId(),
-
-                title:
-                    title,
-
-                date:
-                    date,
-
-                createdAt:
-                    new Date().toISOString()
-
-            });
-
-
-            saveData();
-
-            renderAll();
-
-            showToast(
-                "Deadline added."
-            );
-
-            return true;
-        }
-    );
-}
-
-
-function renderDeadlines() {
-
-    const list =
-        $("#deadlinesList");
-
-    if (!list) {
-        return;
-    }
-
-    list.innerHTML =
-        "";
-
-
-    let deadlines =
-        [...data.deadlines];
-
-
-    if (currentSearch) {
-
-        deadlines =
-            deadlines.filter(
-                function(deadline) {
-
-                    return deadline.title
-                        .toLowerCase()
-                        .includes(
-                            currentSearch
-                        );
-
-                }
-            );
-    }
-
-
-    deadlines.sort(
-        function(a, b) {
-
-            return a.date.localeCompare(
-                b.date
-            );
-
-        }
-    );
-
-
-    if (
-        deadlines.length ===
-        0
-    ) {
-
-        list.innerHTML = `
-            <p class="empty">
-                No upcoming deadlines.
-            </p>
-        `;
-
-        return;
-    }
-
-
-    deadlines.forEach(
-        function(deadline) {
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "item " +
-                (
-                    isOverdue(
-                        deadline.date
-                    )
-                        ? "overdue"
-                        : ""
-                );
-
-
-            let dateLabel =
-                "";
-
-
-            if (
-                isToday(
-                    deadline.date
-                )
-            ) {
-
-                dateLabel =
-                    "Today";
-
-            } else if (
-                isOverdue(
-                    deadline.date
-                )
-            ) {
-
-                dateLabel =
-                    "Passed";
-
-            } else {
-
-                dateLabel =
-                    formatDate(
-                        deadline.date
-                    );
-            }
-
-
-            item.innerHTML = `
-
-                <div class="item-main">
-
-                    <p class="item-title">
-                        ${escapeHTML(
-                            deadline.title
-                        )}
-                    </p>
-
-                    <p class="item-subtitle">
-                        ${escapeHTML(
-                            dateLabel
-                        )}
-                    </p>
-
-                </div>
-
-                <div class="item-actions">
-
-                    <button
-                        class="small-button delete-button"
-                        type="button"
-                        data-action="delete-deadline"
-                        data-id="${deadline.id}"
-                    >
-                        Delete
-                    </button>
-
-                </div>
-
-            `;
-
-            list.appendChild(
-                item
-            );
-        }
-    );
-}
-
-
-function deleteDeadline(id) {
-
-    if (
-        !confirm(
-            "Delete this deadline?"
-        )
-    ) {
-        return;
-    }
-
-    data.deadlines =
-        data.deadlines.filter(
-            function(item) {
-
-                return item.id !== id;
-
-            }
-        );
-
-    saveData();
-
-    renderAll();
-
-    showToast(
-        "Deadline deleted."
-    );
-}
-
-
-/* =========================================================
-   SCHOOL LINKS
-========================================================= */
-
-function openLinkModal() {
-
-    openModal(
-        "Add School Link",
-
-        `
-        <div class="form-group">
-
-            <label for="linkName">
-                Link name
-            </label>
-
-            <input
-                id="linkName"
-                type="text"
-                placeholder="e.g. Canva"
-                maxlength="80"
-                required
-            >
-
-        </div>
-
-
-        <div class="form-group">
-
-            <label for="linkURL">
-                Website URL
-            </label>
-
-            <input
-                id="linkURL"
-                type="url"
-                placeholder="https://..."
-                required
-            >
-
-        </div>
-        `,
-
-        function() {
-
-            const name =
-                $("#linkName")
-                    ?.value
-                    .trim() || "";
-
-            let url =
-                $("#linkURL")
-                    ?.value
-                    .trim() || "";
-
-
-            if (
-                !name ||
-                !url
-            ) {
-
-                showToast(
-                    "Please complete the link details."
-                );
-
-                return false;
-            }
-
-
-            if (
-                !url.startsWith(
-                    "http://"
-                ) &&
-                !url.startsWith(
-                    "https://"
-                )
-            ) {
-
-                url =
-                    "https://" +
-                    url;
-            }
-
-
-            data.links.push({
-
-                id:
-                    createId(),
-
-                name:
-                    name,
-
-                url:
-                    url,
-
-                createdAt:
-                    new Date().toISOString()
-
-            });
-
-
-            saveData();
-
-            renderAll();
-
-            showToast(
-                "School link added."
-            );
-
-            return true;
-        }
-    );
-}
-
-
-function renderLinks() {
-
-    const list =
-        $("#linksList");
-
-    if (!list) {
-        return;
-    }
-
-    list.innerHTML =
-        "";
-
-
-    let links =
-        [...data.links];
-
-
-    if (currentSearch) {
-
-        links =
-            links.filter(
-                function(link) {
-
-                    return (
-                        link.name
-                            .toLowerCase()
-                            .includes(
-                                currentSearch
-                            ) ||
-
-                        link.url
-                            .toLowerCase()
-                            .includes(
-                                currentSearch
-                            )
-                    );
-
-                }
-            );
-    }
-
-
-    if (
-        links.length ===
-        0
-    ) {
-
-        list.innerHTML = `
-            <p class="empty">
-                No school links yet.
-            </p>
-        `;
-
-        return;
-    }
-
-
-    links.forEach(
-        function(link) {
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "item";
-
-
-            item.innerHTML = `
-
-                <div class="item-main">
-
-                    <a
-                        class="item-title link-button"
-                        href="${escapeHTML(
-                            link.url
-                        )}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        🔗
-                        ${escapeHTML(
-                            link.name
-                        )}
-                    </a>
-
-                    <p class="item-subtitle">
-                        ${escapeHTML(
-                            link.url
-                        )}
-                    </p>
-
-                </div>
-
-                <div class="item-actions">
-
-                    <button
-                        class="small-button delete-button"
-                        type="button"
-                        data-action="delete-link"
-                        data-id="${link.id}"
-                    >
-                        Delete
-                    </button>
-
-                </div>
-
-            `;
-
-            list.appendChild(
-                item
-            );
-        }
-    );
-}
-
-
-function deleteLink(id) {
-
-    if (
-        !confirm(
-            "Delete this school link?"
-        )
-    ) {
-        return;
-    }
-
-    data.links =
-        data.links.filter(
-            function(item) {
-
-                return item.id !== id;
-
-            }
-        );
-
-    saveData();
-
-    renderAll();
-
-    showToast(
-        "Link deleted."
-    );
-}
-
-
-/* =========================================================
-   STATS
-========================================================= */
-
-function updateStats() {
-
-    const total =
-        data.tasks.length;
-
-    const completed =
-        data.tasks.filter(
-            function(task) {
-
-                return task.completed;
-
-            }
-        ).length;
-
-    const pending =
-        total -
-        completed;
-
-    const overdue =
-        data.tasks.filter(
-            function(task) {
-
-                return (
-                    !task.completed &&
-                    isOverdue(
-                        task.dueDate
-                    )
-                );
-
-            }
-        ).length;
-
-    const percentage =
-        total === 0
-            ? 0
-            : Math.round(
-                (
-                    completed /
-                    total
-                ) * 100
-            );
-
-
-    if ($("#statSubjects")) {
-
-        $("#statSubjects")
-            .textContent =
-            data.subjects.length;
-    }
-
-    if ($("#statTasks")) {
-
-        $("#statTasks")
-            .textContent =
-            total;
-    }
-
-    if ($("#statPending")) {
-
-        $("#statPending")
-            .textContent =
-            pending;
-    }
-
-    if ($("#statOverdue")) {
-
-        $("#statOverdue")
-            .textContent =
-            overdue;
-    }
-
-    if ($("#progressNumber")) {
-
-        $("#progressNumber")
-            .textContent =
-            percentage +
-            "%";
-    }
-
-
-    const ring =
-        $(".progress-ring");
-
-    if (ring) {
-
-        const degrees =
-            percentage *
-            3.6;
-
-        ring.style.background =
-            `conic-gradient(
-                #b9a1d2
-                ${degrees}deg,
-                #eee5ff
-                ${degrees}deg
-            )`;
-    }
-}
-
-
-/* =========================================================
-   GLOBAL SEARCH
-========================================================= */
-
-function performSearch() {
-
-    const input =
-        $("#globalSearch");
-
-    if (!input) {
-        return;
-    }
-
-    currentSearch =
-        input.value
-            .trim()
-            .toLowerCase();
-
-
-    const clearButton =
-        $("#clearSearch");
-
-    if (clearButton) {
-
-        clearButton.style.display =
-            currentSearch
-                ? "block"
-                : "none";
-    }
-
-
-    renderAll();
-}
-
-
-/* =========================================================
-   FILTERS
-========================================================= */
-
-function setupFilters() {
-
-    document
-        .querySelectorAll(
-            ".filter-button"
-        )
-        .forEach(
-            function(button) {
-
-                button.addEventListener(
-                    "click",
-                    function() {
-
-                        document
-                            .querySelectorAll(
-                                ".filter-button"
-                            )
-                            .forEach(
-                                function(item) {
-
-                                    item.classList.remove(
-                                        "active"
-                                    );
-
-                                }
-                            );
-
-
-                        button.classList.add(
-                            "active"
-                        );
-
-
-                        currentFilter =
-                            button.dataset.filter ||
-                            "all";
-
-
-                        renderTasks();
-
-                    }
-                );
-
-            }
-        );
-}
-
-
-/* =========================================================
-   ITEM ACTIONS
-========================================================= */
-
-function setupItemActions() {
-
-    document.addEventListener(
-        "click",
-        function(event) {
-
-            const button =
-                event.target.closest(
-                    "[data-action]"
-                );
-
-            if (!button) {
-                return;
-            }
-
-
-            const action =
-                button.dataset.action;
-
-            const id =
-                button.dataset.id;
-
-
-            if (
-                action ===
-                "delete-subject"
-            ) {
-
-                deleteSubject(id);
-            }
-
-
-            if (
-                action ===
-                "toggle-task"
-            ) {
-
-                toggleTask(id);
-            }
-
-
-            if (
-                action ===
-                "delete-task"
-            ) {
-
-                deleteTask(id);
-            }
-
-
-            if (
-                action ===
-                "delete-deadline"
-            ) {
-
-                deleteDeadline(id);
-            }
-
-
-            if (
-                action ===
-                "delete-link"
-            ) {
-
-                deleteLink(id);
-            }
-
-        }
-    );
-}
-
-
-/* =========================================================
-   BUTTON SETUP
-========================================================= */
-
-function setupButton(
-    selector,
-    callback
-) {
-
-    const button =
-        $(selector);
-
-    if (button) {
-
-        button.addEventListener(
-            "click",
-            callback
-        );
-    }
-}
-
-
-function setupButtons() {
-
-    setupButton(
-        "#addSubjectButton",
-        openSubjectModal
-    );
-
-    setupButton(
-        "#quickSubjectButton",
-        openSubjectModal
-    );
-
-    setupButton(
-        "#addTaskButton",
-        openTaskModal
-    );
-
-    setupButton(
-        "#quickTaskButton",
-        openTaskModal
-    );
-
-    setupButton(
-        "#addDeadlineButton",
-        openDeadlineModal
-    );
-
-    setupButton(
-        "#quickDeadlineButton",
-        openDeadlineModal
-    );
-
-    setupButton(
-        "#addLinkButton",
-        openLinkModal
-    );
-}
-
-
-/* =========================================================
-   SEARCH EVENTS
-========================================================= */
-
-function setupSearch() {
-
-    const search =
-        $("#globalSearch");
-
-    const clear =
-        $("#clearSearch");
-
-
-    if (search) {
-
-        search.addEventListener(
-            "input",
-            performSearch
-        );
-    }
-
-
-    if (clear) {
-
-        clear.addEventListener(
-            "click",
-            function() {
-
-                if (search) {
-
-                    search.value =
-                        "";
-                }
-
-                performSearch();
-
-                if (search) {
-
-                    search.focus();
-                }
-
-            }
-        );
-    }
-}
-
-
-/* =========================================================
-   DARK MODE
-========================================================= */
-
-function loadTheme() {
-
-    const theme =
-        localStorage.getItem(
-            THEME_KEY
-        );
-
-
-    if (
-        theme ===
-        "dark"
-    ) {
-
-        document.body.classList.add(
-            "dark"
-        );
-
-    } else {
-
-        document.body.classList.remove(
-            "dark"
-        );
-    }
-
-
-    updateThemeButton();
-}
-
-
-function updateThemeButton() {
-
-    const button =
-        $("#themeButton");
-
-    if (!button) {
-        return;
-    }
-
-    const isDark =
-        document.body.classList.contains(
-            "dark"
-        );
-
-    button.textContent =
-        isDark
-            ? "☀️"
-            : "🌙";
-}
-
-
-function setupTheme() {
-
-    const button =
-        $("#themeButton");
-
-    if (!button) {
-        return;
-    }
-
-    button.addEventListener(
-        "click",
-        function() {
-
-            document.body.classList.toggle(
-                "dark"
-            );
-
-            const isDark =
-                document.body.classList.contains(
-                    "dark"
-                );
-
-            localStorage.setItem(
-                THEME_KEY,
-                isDark
-                    ? "dark"
-                    : "light"
-            );
-
-            updateThemeButton();
-
-        }
-    );
-}
-
-
-/* =========================================================
-   EXPORT
-========================================================= */
-
-function setupExport() {
-
-    const button =
-        $("#exportButton");
-
-    if (!button) {
-        return;
-    }
-
-    button.addEventListener(
-        "click",
-        function() {
-
-            const exportData = {
-
-                app:
-                    "Purple Study Hub",
-
-                version:
-                    1,
-
-                exportedAt:
-                    new Date().toISOString(),
-
-                data:
-                    data
-
-            };
-
-
-            const blob =
-                new Blob(
-                    [
-                        JSON.stringify(
-                            exportData,
-                            null,
-                            2
-                        )
-                    ],
-                    {
-                        type:
-                            "application/json"
-                    }
-                );
-
-
-            const url =
-                URL.createObjectURL(
-                    blob
-                );
-
-
-            const link =
-                document.createElement(
-                    "a"
-                );
-
-            link.href =
-                url;
-
-            link.download =
-                "purple-study-hub-backup.json";
-
-            document.body.appendChild(
-                link
-            );
-
-            link.click();
-
-            link.remove();
-
-            URL.revokeObjectURL(
-                url
-            );
-
-
-            showToast(
-                "Backup downloaded."
-            );
-
-        }
-    );
-}
-
-
-/* =========================================================
-   IMPORT
-========================================================= */
-
-function setupImport() {
-
-    const button =
-        $("#importButton");
-
-    const input =
-        $("#importFile");
-
-    if (
-        !button ||
-        !input
-    ) {
-        return;
-    }
-
-
-    button.addEventListener(
-        "click",
-        function() {
-
-            input.click();
-
-        }
-    );
-
-
-    input.addEventListener(
-        "change",
-        function(event) {
-
-            const file =
-                event.target.files[0];
-
-            if (!file) {
-                return;
-            }
-
-
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-                function() {
-
-                    try {
-
-                        const imported =
-                            JSON.parse(
-                                reader.result
-                            );
-
-
-                        if (
-                            !imported.data ||
-                            typeof imported.data !==
-                            "object"
-                        ) {
-
-                            throw new Error(
-                                "Invalid backup"
-                            );
-                        }
-
-
-                        if (
-                            !confirm(
-                                "Import this backup? Your current data will be replaced."
-                            )
-                        ) {
-
-                            return;
-                        }
-
-
-                        data = {
-
-                            subjects:
-                                Array.isArray(
-                                    imported.data.subjects
-                                )
-                                    ? imported.data.subjects
-                                    : [],
-
-                            tasks:
-                                Array.isArray(
-                                    imported.data.tasks
-                                )
-                                    ? imported.data.tasks
-                                    : [],
-
-                            deadlines:
-                                Array.isArray(
-                                    imported.data.deadlines
-                                )
-                                    ? imported.data.deadlines
-                                    : [],
-
-                            links:
-                                Array.isArray(
-                                    imported.data.links
-                                )
-                                    ? imported.data.links
-                                    : []
-
-                        };
-
-
-                        saveData();
-
-                        renderAll();
-
-                        showToast(
-                            "Backup imported successfully."
-                        );
-
-
-                    } catch (error) {
-
-                        showToast(
-                            "That backup file is not valid."
-                        );
-
-                    }
-
-                };
-
-
-            reader.readAsText(
-                file
-            );
-
-            input.value =
-                "";
-
-        }
-    );
-}
-
-
-/* =========================================================
-   CLEAR ALL
-========================================================= */
-
-function setupClearAll() {
-
-    const button =
-        $("#clearAllButton");
-
-    if (!button) {
-        return;
-    }
-
-
-    button.addEventListener(
-        "click",
-        function() {
-
-            if (
-                !confirm(
-                    "Delete ALL Purple Study Hub data?\n\nThis cannot be undone."
-                )
-            ) {
-
-                return;
-            }
-
-
-            data = {
-
-                subjects: [],
-
-                tasks: [],
-
-                deadlines: [],
-
-                links: []
-
-            };
-
-
-            saveData();
-
-            renderAll();
-
-
-            showToast(
-                "All study data cleared."
-            );
-
-        }
-    );
-}
-
-
-/* =========================================================
-   POMODORO
-========================================================= */
-
-let timerSeconds =
-    25 * 60;
-
-let timerInterval =
-    null;
-
-let timerRunning =
-    false;
-
-
-function updateTimerDisplay() {
-
-    const display =
-        $("#timerDisplay");
-
-    if (!display) {
-        return;
-    }
-
-
-    const minutes =
-        Math.floor(
-            timerSeconds /
-            60
-        );
-
-    const seconds =
-        timerSeconds %
-        60;
-
-
-    display.textContent =
-        `${String(minutes).padStart(
-            2,
-            "0"
-        )}:${String(seconds).padStart(
-            2,
-            "0"
-        )}`;
-}
-
-
-function startTimer() {
-
-    if (timerRunning) {
-
-        clearInterval(
-            timerInterval
-        );
-
-        timerRunning =
-            false;
-
-        const button =
-            $("#timerStart");
-
-        if (button) {
-
-            button.textContent =
-                "Start";
-        }
-
-        return;
-    }
-
-
-    timerRunning =
-        true;
-
-
-    const button =
-        $("#timerStart");
-
-    if (button) {
-
-        button.textContent =
-            "Pause";
-    }
-
-
-    timerInterval =
-        setInterval(
-            function() {
-
-                timerSeconds--;
-
-                updateTimerDisplay();
-
-
-                if (
-                    timerSeconds <=
-                    0
-                ) {
-
-                    clearInterval(
-                        timerInterval
-                    );
-
-                    timerRunning =
-                        false;
-
-
-                    if (button) {
-
-                        button.textContent =
-                            "Start";
-                    }
-
-
-                    showToast(
-                        "Time's up! Take a little break. 💜"
-                    );
-
-                }
-
-            },
-            1000
-        );
-}
-
-
-function resetTimer(
-    minutes = 25
-) {
-
-    clearInterval(
-        timerInterval
-    );
-
-    timerRunning =
-        false;
-
-    timerSeconds =
-        minutes * 60;
-
-
-    const button =
-        $("#timerStart");
-
-    if (button) {
-
-        button.textContent =
-            "Start";
-    }
-
-
-    updateTimerDisplay();
-}
-
-
-function setupTimer() {
-
-    setupButton(
-        "#timerStart",
-        startTimer
-    );
-
-
-    setupButton(
-        "#timerReset",
-        function() {
-
-            const active =
-                document.querySelector(
-                    ".timer-mode-button.active"
-                );
-
-            const minutes =
-                active
-                    ? Number(
-                        active.dataset.minutes
-                    )
-                    : 25;
-
-            resetTimer(
-                minutes
-            );
-
-        }
-    );
-
-
-    document
-        .querySelectorAll(
-            ".timer-mode-button"
-        )
-        .forEach(
-            function(button) {
-
-                button.addEventListener(
-                    "click",
-                    function() {
-
-                        document
-                            .querySelectorAll(
-                                ".timer-mode-button"
-                            )
-                            .forEach(
-                                function(item) {
-
-                                    item.classList.remove(
-                                        "active"
-                                    );
-
-                                }
-                            );
-
-
-                        button.classList.add(
-                            "active"
-                        );
-
-
-                        resetTimer(
-                            Number(
-                                button.dataset.minutes
-                            )
-                        );
-
-                    }
-                );
-
-            }
-        );
-}
-
-
-/* =========================================================
-   CRAM & JAM — AUDIUS
-========================================================= */
-
-/*
-   PUT YOUR AUDIUS API KEY BELOW.
-
-   Do NOT put the Bearer Token here.
-*/
-
-const AUDIUS_API_KEY =
-    "0x786c445991fd07b656ce63ecbe3fe2ed3fbf13c4";
-
-
-let audiusSdk =
-    null;
-
-let currentAudio =
-    null;
-
-let currentTrack =
-    null;
-
-
-/* =========================================================
-   AUDIUS SDK SETUP
-========================================================= */
-
-function initializeAudius() {
-
-    if (
-        typeof window.audiusSdk !==
-        "function"
-    ) {
-
-        console.error(
-            "Audius SDK was not loaded."
-        );
-
-        return;
-    }
-
-
-    if (
-        AUDIUS_API_KEY ===
-        "PASTE_YOUR_API_KEY_HERE"
-    ) {
-
-        console.warn(
-            "Audius API key has not been added yet."
-        );
-
-        return;
-    }
-
-
-    try {
-
-        audiusSdk =
-            window.audiusSdk({
-
-                apiKey:
-                    AUDIUS_API_KEY
-
-            });
-
-
-        console.log(
-            "Audius Cram & Jam ready."
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Could not initialize Audius:",
-            error
-        );
-    }
-}
-
-
-/* =========================================================
-   CRAM & JAM UI
-========================================================= */
-
-function setupCramAndJam() {
-
-    const player =
-        $("#spotifyPlayer");
-
-    if (!player) {
-        return;
-    }
-
-
-    player.innerHTML = `
-
-        <div class="cram-jam-content">
-
-            <div class="cram-jam-message">
-
-                <strong>
-                    Find something to listen to
-                </strong>
-
-                <span>
-                    Search for a song or artist.
-                </span>
-
-            </div>
-
-
-            <div class="spotify-input-row">
-
-                <input
-                    type="text"
-                    id="musicSearchInput"
-                    placeholder="Search a song or artist..."
-                    autocomplete="off"
-                >
-
-                <button
-                    type="button"
-                    id="musicSearchButton"
-                    class="primary-button"
-                >
-                    Search
-                </button>
-
-            </div>
-
-
-            <div
-                id="musicSearchResults"
-                class="music-search-results"
-            ></div>
-
-
-            <div
-                id="musicPlayer"
-                class="music-player"
-            ></div>
-
-        </div>
-
-    `;
-
-
-    const searchInput =
-        $("#musicSearchInput");
-
-    const searchButton =
-        $("#musicSearchButton");
-
-
-    if (searchButton) {
-
-        searchButton.addEventListener(
-            "click",
-            searchAudiusTracks
-        );
-    }
-
-
-    if (searchInput) {
-
-        searchInput.addEventListener(
-            "keydown",
-            function(event) {
-
-                if (
-                    event.key ===
-                    "Enter"
-                ) {
-
-                    searchAudiusTracks();
-                }
-
-            }
-        );
-    }
-}
-
-
-/* =========================================================
-   AUDIUS SEARCH
-========================================================= */
-
-async function searchAudiusTracks() {
-
-    const input =
-        $("#musicSearchInput");
-
-    const results =
-        $("#musicSearchResults");
-
-
-    if (
-        !input ||
-        !results
-    ) {
-        return;
-    }
-
-
-    const query =
-        input.value.trim();
-
-
-    if (!query) {
-
-        showToast(
-            "Type a song or artist first."
-        );
-
-        return;
-    }
-
-
-    if (!audiusSdk) {
-
-        showToast(
-            "Add your Audius API key first."
-        );
-
-        return;
-    }
-
-
-    results.innerHTML = `
-
-        <p class="music-loading">
-            Searching...
-        </p>
-
-    `;
-
-
-    try {
-
-        const response =
-            await audiusSdk.tracks.searchTracks({
-
-                query:
-                    query,
-
-                limit:
-                    8,
-
-                sortMethod:
-                    "relevant"
-
-            });
-
-
-        const tracks =
-            response?.data || [];
-
-
-        if (
-            tracks.length ===
-            0
-        ) {
-
-            results.innerHTML = `
-
-                <p class="empty">
-                    No songs found.
-                </p>
-
             `;
 
             return;
         }
 
+        container.innerHTML = data.subjects
+            .map(subject => {
+                const taskCount = data.tasks.filter(
+                    task => task.subjectId === subject.id
+                ).length;
 
-        results.innerHTML =
-            tracks
-                .map(
-                    function(track) {
+                const completedCount = data.tasks.filter(
+                    task =>
+                        task.subjectId === subject.id &&
+                        task.completed
+                ).length;
 
-                        const title =
-                            escapeHTML(
-                                track.title ||
-                                "Untitled"
-                            );
+                return `
+                    <div
+                        class="subject-card"
+                        style="--subject-color:${escapeHTML(subject.color || "#b99acb")}"
+                    >
+                        <div class="subject-color"></div>
 
+                        <div class="subject-info">
+                            <h3>${escapeHTML(subject.name)}</h3>
+                            <p>
+                                ${completedCount}/${taskCount}
+                                task${taskCount === 1 ? "" : "s"} completed
+                            </p>
+                        </div>
 
-                        const artist =
-                            escapeHTML(
-                                track.user?.name ||
-                                "Unknown artist"
-                            );
-
-
-                        const artwork =
-                            track.artwork?.[
-                                "_150x150"
-                            ] ||
-                            "";
-
-
-                        return `
+                        <div class="card-actions">
+                            <button
+                                class="icon-button"
+                                data-action="edit-subject"
+                                data-id="${subject.id}"
+                                title="Edit"
+                            >✎</button>
 
                             <button
-                                type="button"
-                                class="music-result"
-                                data-track-id="${escapeHTML(
-                                    track.id
-                                )}"
-                            >
+                                class="icon-button danger"
+                                data-action="delete-subject"
+                                data-id="${subject.id}"
+                                title="Delete"
+                            >×</button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("");
+    }
 
-                                ${
-                                    artwork
-                                        ? `
-                                            <img
-                                                src="${escapeHTML(
-                                                    artwork
-                                                )}"
-                                                alt=""
-                                            >
-                                          `
-                                        : `
-                                            <span
-                                                class="music-result-icon"
-                                            >
-                                                ♪
-                                            </span>
-                                          `
-                                }
+    /* =========================================================
+       TASKS
+       ========================================================= */
 
+    let currentTaskFilter = "all";
 
-                                <span
-                                    class="music-result-info"
-                                >
+    function renderTasks() {
+        const container = $("#tasksList");
 
-                                    <strong>
-                                        ${title}
-                                    </strong>
+        if (!container) return;
 
-                                    <small>
-                                        ${artist}
-                                    </small>
+        let tasks = [...data.tasks];
 
-                                </span>
+        if (currentTaskFilter === "active") {
+            tasks = tasks.filter(task => !task.completed);
+        }
 
-                            </button>
+        if (currentTaskFilter === "completed") {
+            tasks = tasks.filter(task => task.completed);
+        }
 
-                        `;
+        tasks.sort((a, b) => {
+            if (a.completed !== b.completed) {
+                return a.completed ? 1 : -1;
+            }
 
-                    }
-                )
-                .join("");
+            if (!a.dueDate && !b.dueDate) return 0;
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
 
+            return a.dueDate.localeCompare(b.dueDate);
+        });
 
-        results
-            .querySelectorAll(
-                ".music-result"
-            )
-            .forEach(
-                function(button) {
-
-                    button.addEventListener(
-                        "click",
-                        function() {
-
-                            playAudiusTrack(
-                                button.dataset.trackId
-                            );
-
+        if (!tasks.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">✓</div>
+                    <p>
+                        ${
+                            currentTaskFilter === "completed"
+                                ? "No completed tasks yet."
+                                : "No tasks here."
                         }
-                    );
-
-                }
-            );
-
-
-    } catch (error) {
-
-        console.error(
-            "Audius search error:",
-            error
-        );
-
-
-        results.innerHTML = `
-
-            <p class="empty">
-                Something went wrong while searching.
-            </p>
-
-        `;
-
-
-        showToast(
-            "Couldn't search music right now."
-        );
-    }
-}
-
-
-/* =========================================================
-   AUDIUS PLAYBACK
-========================================================= */
-
-async function playAudiusTrack(
-    trackId
-) {
-
-    if (!audiusSdk) {
-
-        showToast(
-            "Audius is not ready yet."
-        );
-
-        return;
-    }
-
-
-    const player =
-        $("#musicPlayer");
-
-    if (!player) {
-        return;
-    }
-
-
-    try {
-
-        const response =
-            await audiusSdk.tracks.getTrack({
-
-                trackId:
-                    trackId
-
-            });
-
-
-        const track =
-            response?.data;
-
-
-        if (!track) {
-
-            showToast(
-                "That song could not be loaded."
-            );
+                    </p>
+                </div>
+            `;
 
             return;
         }
 
+        container.innerHTML = tasks
+            .map(task => {
+                const subject = data.subjects.find(
+                    subject => subject.id === task.subjectId
+                );
 
-        currentTrack =
-            track;
+                const priorityClass =
+                    task.priority === "high"
+                        ? "priority-high"
+                        : task.priority === "medium"
+                        ? "priority-medium"
+                        : "priority-low";
 
+                return `
+                    <div class="task-card ${task.completed ? "completed" : ""}">
+                        <button
+                            class="task-check"
+                            data-action="toggle-task"
+                            data-id="${task.id}"
+                            aria-label="Complete task"
+                        >
+                            ${task.completed ? "✓" : ""}
+                        </button>
 
-        if (currentAudio) {
+                        <div class="task-content">
+                            <h3>${escapeHTML(task.title || "Untitled task")}</h3>
 
-            currentAudio.pause();
+                            ${
+                                task.description
+                                    ? `<p>${escapeHTML(task.description)}</p>`
+                                    : ""
+                            }
 
-            currentAudio =
-                null;
+                            <div class="task-meta">
+                                ${
+                                    subject
+                                        ? `<span>${escapeHTML(subject.name)}</span>`
+                                        : ""
+                                }
+
+                                ${
+                                    task.dueDate
+                                        ? `<span>Due ${formatDate(task.dueDate)}</span>`
+                                        : ""
+                                }
+
+                                ${
+                                    task.priority
+                                        ? `<span class="${priorityClass}">
+                                            ${escapeHTML(task.priority)}
+                                           </span>`
+                                        : ""
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <button
+                                class="icon-button"
+                                data-action="edit-task"
+                                data-id="${task.id}"
+                                title="Edit"
+                            >✎</button>
+
+                            <button
+                                class="icon-button danger"
+                                data-action="delete-task"
+                                data-id="${task.id}"
+                                title="Delete"
+                            >×</button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("");
+    }
+
+    function setupTaskFilters() {
+        $$(".task-filter").forEach(button => {
+            button.addEventListener("click", () => {
+                $$(".task-filter").forEach(btn =>
+                    btn.classList.remove("active")
+                );
+
+                button.classList.add("active");
+
+                currentTaskFilter =
+                    button.dataset.filter || "all";
+
+                renderTasks();
+            });
+        });
+    }
+
+    /* =========================================================
+       DEADLINES
+       ========================================================= */
+
+    function renderDeadlines() {
+        const container = $("#deadlinesList");
+
+        if (!container) return;
+
+        const deadlines = [...data.deadlines]
+            .sort((a, b) => {
+                return (a.date || "").localeCompare(b.date || "");
+            })
+            .slice(0, 10);
+
+        if (!deadlines.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📅</div>
+                    <p>No upcoming deadlines.</p>
+                </div>
+            `;
+
+            return;
         }
 
+        container.innerHTML = deadlines
+            .map(deadline => {
+                const overdue =
+                    deadline.date &&
+                    deadline.date < todayISO();
 
-        const streamUrl =
-            `https://api.audius.co/v1/tracks/${encodeURIComponent(
-                track.id
-            )}/stream`;
+                return `
+                    <div class="deadline-card ${overdue ? "overdue" : ""}">
+                        <div class="deadline-date">
+                            <span>${formatDate(deadline.date)}</span>
+                        </div>
 
+                        <div class="deadline-info">
+                            <h3>${escapeHTML(deadline.title)}</h3>
 
-        const title =
-            escapeHTML(
-                track.title ||
-                "Untitled"
-            );
+                            ${
+                                deadline.description
+                                    ? `<p>${escapeHTML(deadline.description)}</p>`
+                                    : ""
+                            }
+                        </div>
 
+                        <div class="card-actions">
+                            <button
+                                class="icon-button"
+                                data-action="edit-deadline"
+                                data-id="${deadline.id}"
+                            >✎</button>
 
-        const artist =
-            escapeHTML(
-                track.user?.name ||
-                "Unknown artist"
-            );
-
-
-        const artwork =
-            track.artwork?.[
-                "_150x150"
-            ] ||
-            "";
-
-
-        player.innerHTML = `
-
-            <div class="music-player-inner">
-
-                <div class="music-now-playing">
-
-                    ${
-                        artwork
-                            ? `
-                                <img
-                                    src="${escapeHTML(
-                                        artwork
-                                    )}"
-                                    alt=""
-                                >
-                              `
-                            : `
-                                <span
-                                    class="music-result-icon"
-                                >
-                                    ♪
-                                </span>
-                              `
-                    }
-
-
-                    <div>
-
-                        <strong>
-                            ${title}
-                        </strong>
-
-                        <span>
-                            ${artist}
-                        </span>
-
+                            <button
+                                class="icon-button danger"
+                                data-action="delete-deadline"
+                                data-id="${deadline.id}"
+                            >×</button>
+                        </div>
                     </div>
+                `;
+            })
+            .join("");
+    }
 
+    /* =========================================================
+       CLASS SCHEDULE
+       ========================================================= */
+
+    const weekdayOrder = {
+        Monday: 1,
+        Tuesday: 2,
+        Wednesday: 3,
+        Thursday: 4,
+        Friday: 5,
+        Saturday: 6,
+        Sunday: 7
+    };
+
+    function getTodayName() {
+        return new Date().toLocaleDateString("en-US", {
+            weekday: "long"
+        });
+    }
+
+    function sortSchedule(items) {
+        return [...items].sort((a, b) => {
+            const dayDifference =
+                (weekdayOrder[a.day] || 99) -
+                (weekdayOrder[b.day] || 99);
+
+            if (dayDifference !== 0) {
+                return dayDifference;
+            }
+
+            return (a.startTime || "").localeCompare(
+                b.startTime || ""
+            );
+        });
+    }
+
+    function renderSchedule() {
+        const container = $("#scheduleList");
+        const todayContainer = $("#todayClasses");
+
+        const sorted = sortSchedule(data.schedule);
+
+        if (container) {
+            if (!sorted.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🗓️</div>
+                        <p>No class schedule yet.</p>
+                        <button
+                            class="small-button"
+                            data-action="add-schedule"
+                        >
+                            Add class
+                        </button>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = sorted
+                    .map(item => scheduleHTML(item))
+                    .join("");
+            }
+        }
+
+        if (todayContainer) {
+            const today = getTodayName();
+
+            const todayClasses = sorted.filter(
+                item => item.day === today
+            );
+
+            if (!todayClasses.length) {
+                todayContainer.innerHTML = `
+                    <div class="today-empty">
+                        No classes today.
+                    </div>
+                `;
+            } else {
+                todayContainer.innerHTML = todayClasses
+                    .map(item => scheduleHTML(item, true))
+                    .join("");
+            }
+        }
+    }
+
+    function scheduleHTML(item, today = false) {
+        return `
+            <div class="schedule-card ${today ? "today-class" : ""}">
+                <div class="schedule-time">
+                    <strong>${formatTime(item.startTime)}</strong>
+                    <span>${formatTime(item.endTime)}</span>
                 </div>
 
+                <div class="schedule-info">
+                    <span class="schedule-day">
+                        ${escapeHTML(item.day)}
+                    </span>
 
-                <audio
-                    id="audiusAudio"
-                    controls
-                    preload="none"
-                >
+                    <h3>${escapeHTML(item.subject)}</h3>
 
-                    <source
-                        src="${streamUrl}"
-                        type="audio/mpeg"
-                    >
+                    ${
+                        item.teacher
+                            ? `<p>${escapeHTML(item.teacher)}</p>`
+                            : ""
+                    }
+                </div>
 
-                    Your browser does not support audio playback.
+                <div class="card-actions">
+                    <button
+                        class="icon-button"
+                        data-action="edit-schedule"
+                        data-id="${item.id}"
+                    >✎</button>
 
-                </audio>
-
+                    <button
+                        class="icon-button danger"
+                        data-action="delete-schedule"
+                        data-id="${item.id}"
+                    >×</button>
+                </div>
             </div>
+        `;
+    }
 
+    /* =========================================================
+       NOTES
+       ========================================================= */
+
+    let notesSort = "updated";
+    let selectedFolder = "all";
+
+    function renderFolderFilter() {
+        const select = $("#notesFolderFilter");
+
+        if (!select) return;
+
+        select.innerHTML = `
+            <option value="all">All folders</option>
+            ${data.folders
+                .map(
+                    folder => `
+                    <option value="${folder.id}">
+                        ${escapeHTML(folder.name)}
+                    </option>
+                `
+                )
+                .join("")}
         `;
 
+        select.value = selectedFolder;
+    }
 
-        currentAudio =
-            $("#audiusAudio");
+    function renderNotes() {
+        const container = $("#notesList");
 
+        if (!container) return;
 
-        if (currentAudio) {
+        let notes = [...data.notes];
 
-            currentAudio.play()
-                .catch(
-                    function() {
-
-                        showToast(
-                            "Press Play to start the song."
-                        );
-
-                    }
-                );
+        if (selectedFolder !== "all") {
+            notes = notes.filter(
+                note => (note.folderId || "unfiled") === selectedFolder
+            );
         }
 
+        if (notesSort === "updated") {
+            notes.sort(
+                (a, b) =>
+                    new Date(b.updatedAt || b.createdAt) -
+                    new Date(a.updatedAt || a.createdAt)
+            );
+        }
 
-    } catch (error) {
+        if (notesSort === "created") {
+            notes.sort(
+                (a, b) =>
+                    new Date(b.createdAt) -
+                    new Date(a.createdAt)
+            );
+        }
 
-        console.error(
-            "Audius playback error:",
-            error
-        );
+        if (notesSort === "az") {
+            notes.sort((a, b) =>
+                (a.title || "").localeCompare(b.title || "")
+            );
+        }
 
+        if (notesSort === "za") {
+            notes.sort((a, b) =>
+                (b.title || "").localeCompare(a.title || "")
+            );
+        }
 
-        showToast(
-            "Couldn't play this song."
+        if (notesSort === "pinned") {
+            notes.sort((a, b) => {
+                if (a.pinned !== b.pinned) {
+                    return a.pinned ? -1 : 1;
+                }
+
+                return new Date(b.updatedAt || b.createdAt) -
+                    new Date(a.updatedAt || a.createdAt);
+            });
+        }
+
+        if (!notes.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <p>No notes here yet.</p>
+                    <button
+                        class="small-button"
+                        data-action="add-note"
+                    >
+                        Create a note
+                    </button>
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = notes
+            .map(note => {
+                const folder = data.folders.find(
+                    folder => folder.id === note.folderId
+                );
+
+                return `
+                    <div class="note-card ${note.pinned ? "pinned" : ""}">
+                        <div class="note-main">
+                            <div class="note-heading">
+                                <h3>${escapeHTML(note.title || "Untitled")}</h3>
+
+                                ${
+                                    note.pinned
+                                        ? `<span class="pin-label">Pinned</span>`
+                                        : ""
+                                }
+                            </div>
+
+                            ${
+                                note.content
+                                    ? `<p>${escapeHTML(
+                                          note.content
+                                      ).slice(0, 180)}${
+                                          note.content.length > 180
+                                              ? "..."
+                                              : ""
+                                      }</p>`
+                                    : `<p class="muted">No content</p>`
+                            }
+
+                            <div class="note-meta">
+                                <span>
+                                    ${escapeHTML(
+                                        folder?.name || "Unfiled"
+                                    )}
+                                </span>
+
+                                <span>
+                                    ${formatDate(
+                                        (
+                                            note.updatedAt ||
+                                            note.createdAt ||
+                                            ""
+                                        ).slice(0, 10)
+                                    )}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <button
+                                class="icon-button"
+                                data-action="pin-note"
+                                data-id="${note.id}"
+                                title="${note.pinned ? "Unpin" : "Pin"}"
+                            >📌</button>
+
+                            <button
+                                class="icon-button"
+                                data-action="edit-note"
+                                data-id="${note.id}"
+                                title="Edit"
+                            >✎</button>
+
+                            <button
+                                class="icon-button danger"
+                                data-action="delete-note"
+                                data-id="${note.id}"
+                                title="Delete"
+                            >×</button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("");
+    }
+
+    function setupNotes() {
+        $("#notesFolderFilter")?.addEventListener("change", event => {
+            selectedFolder = event.target.value;
+            renderNotes();
+        });
+
+        $("#notesSort")?.addEventListener("change", event => {
+            notesSort = event.target.value;
+            renderNotes();
+        });
+    }
+
+    /* =========================================================
+       LINKS
+       ========================================================= */
+
+    function renderLinks() {
+        const container = $("#linksList");
+
+        if (!container) return;
+
+        if (!data.links.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🔗</div>
+                    <p>No school resources yet.</p>
+                    <button
+                        class="small-button"
+                        data-action="add-link"
+                    >
+                        Add a link
+                    </button>
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = data.links
+            .map(link => `
+                <div class="link-card">
+                    <div class="link-info">
+                        <h3>${escapeHTML(link.name)}</h3>
+                        <a
+                            href="${escapeHTML(link.url)}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            ${escapeHTML(link.url)}
+                        </a>
+                    </div>
+
+                    <div class="card-actions">
+                        <button
+                            class="icon-button"
+                            data-action="edit-link"
+                            data-id="${link.id}"
+                        >✎</button>
+
+                        <button
+                            class="icon-button danger"
+                            data-action="delete-link"
+                            data-id="${link.id}"
+                        >×</button>
+                    </div>
+                </div>
+            `)
+            .join("");
+    }
+
+    /* =========================================================
+       STATS / PROGRESS
+       ========================================================= */
+
+    function renderStats() {
+        const totalTasks = data.tasks.length;
+        const completedTasks = data.tasks.filter(
+            task => task.completed
+        ).length;
+
+        const activeTasks = totalTasks - completedTasks;
+
+        const statTasks = $("#statTasks");
+        const statSubjects = $("#statSubjects");
+        const statDeadlines = $("#statDeadlines");
+        const statProgress = $("#statProgress");
+
+        if (statTasks) {
+            statTasks.textContent = activeTasks;
+        }
+
+        if (statSubjects) {
+            statSubjects.textContent = data.subjects.length;
+        }
+
+        if (statDeadlines) {
+            statDeadlines.textContent = data.deadlines.length;
+        }
+
+        if (statProgress) {
+            const percent = totalTasks
+                ? Math.round(
+                      (completedTasks / totalTasks) * 100
+                  )
+                : 0;
+
+            statProgress.textContent = `${percent}%`;
+        }
+
+        const progressBar = $("#progressBar");
+
+        if (progressBar) {
+            const percent = totalTasks
+                ? Math.round(
+                      (completedTasks / totalTasks) * 100
+                  )
+                : 0;
+
+            progressBar.style.width = `${percent}%`;
+        }
+    }
+
+    /* =========================================================
+       MODAL
+       ========================================================= */
+
+    const modalOverlay = $("#modalOverlay");
+    const modalTitle = $("#modalTitle");
+    const modalFields = $("#modalFields");
+    const modalForm = $("#modalForm");
+
+    let modalSubmitHandler = null;
+
+    function openModal(title, fields, submitHandler) {
+        if (!modalOverlay || !modalFields || !modalTitle) return;
+
+        modalTitle.textContent = title;
+
+        modalFields.innerHTML = fields
+            .map(fieldHTML)
+            .join("");
+
+        modalSubmitHandler = submitHandler;
+
+        modalOverlay.classList.add("open");
+
+        setTimeout(() => {
+            modalFields.querySelector("input, textarea, select")?.focus();
+        }, 50);
+    }
+
+    function fieldHTML(field) {
+        const required = field.required ? "required" : "";
+
+        if (field.type === "textarea") {
+            return `
+                <label class="form-field">
+                    <span>${escapeHTML(field.label)}</span>
+                    <textarea
+                        name="${escapeHTML(field.name)}"
+                        placeholder="${escapeHTML(field.placeholder || "")}"
+                        ${required}
+                    >${escapeHTML(field.value || "")}</textarea>
+                </label>
+            `;
+        }
+
+        if (field.type === "select") {
+            return `
+                <label class="form-field">
+                    <span>${escapeHTML(field.label)}</span>
+
+                    <select
+                        name="${escapeHTML(field.name)}"
+                        ${required}
+                    >
+                        ${field.options
+                            .map(option => `
+                                <option
+                                    value="${escapeHTML(option.value)}"
+                                    ${
+                                        option.value === field.value
+                                            ? "selected"
+                                            : ""
+                                    }
+                                >
+                                    ${escapeHTML(option.label)}
+                                </option>
+                            `)
+                            .join("")}
+                    </select>
+                </label>
+            `;
+        }
+
+        return `
+            <label class="form-field">
+                <span>${escapeHTML(field.label)}</span>
+
+                <input
+                    type="${escapeHTML(field.type || "text")}"
+                    name="${escapeHTML(field.name)}"
+                    value="${escapeHTML(field.value || "")}"
+                    placeholder="${escapeHTML(field.placeholder || "")}"
+                    ${required}
+                />
+            </label>
+        `;
+    }
+
+    function closeModal() {
+        modalOverlay?.classList.remove("open");
+        modalSubmitHandler = null;
+    }
+
+    modalForm?.addEventListener("submit", event => {
+        event.preventDefault();
+
+        if (!modalSubmitHandler) return;
+
+        const formData = new FormData(modalForm);
+        const values = Object.fromEntries(formData.entries());
+
+        modalSubmitHandler(values);
+        closeModal();
+    });
+
+    modalOverlay?.addEventListener("click", event => {
+        if (event.target === modalOverlay) {
+            closeModal();
+        }
+    });
+
+    /* =========================================================
+       SUBJECT MODALS
+       ========================================================= */
+
+    function addSubject() {
+        openModal(
+            "Add Subject",
+            [
+                {
+                    name: "name",
+                    label: "Subject name",
+                    placeholder: "e.g. General Mathematics",
+                    required: true
+                },
+                {
+                    name: "color",
+                    label: "Color",
+                    type: "color",
+                    value: "#b99acb"
+                }
+            ],
+            values => {
+                data.subjects.push({
+                    id: generateId("subject"),
+                    name: values.name.trim(),
+                    color: values.color || "#b99acb",
+                    createdAt: new Date().toISOString()
+                });
+
+                saveData();
+                renderAll();
+
+                showToast("Subject added.");
+            }
         );
     }
-}
 
+    function editSubject(id) {
+        const subject = data.subjects.find(
+            item => item.id === id
+        );
 
-/* =========================================================
-   RENDER EVERYTHING
-========================================================= */
+        if (!subject) return;
 
-function renderAll() {
+        openModal(
+            "Edit Subject",
+            [
+                {
+                    name: "name",
+                    label: "Subject name",
+                    value: subject.name,
+                    required: true
+                },
+                {
+                    name: "color",
+                    label: "Color",
+                    type: "color",
+                    value: subject.color || "#b99acb"
+                }
+            ],
+            values => {
+                subject.name = values.name.trim();
+                subject.color = values.color;
 
-    renderSubjects();
+                saveData();
+                renderAll();
 
-    renderTasks();
+                showToast("Subject updated.");
+            }
+        );
+    }
 
-    renderDeadlines();
+    /* =========================================================
+       TASK MODALS
+       ========================================================= */
 
-    renderLinks();
+    function addTask() {
+        openModal(
+            "Add Task",
+            [
+                {
+                    name: "title",
+                    label: "Task",
+                    placeholder: "What do you need to do?",
+                    required: true
+                },
+                {
+                    name: "description",
+                    label: "Description",
+                    type: "textarea",
+                    placeholder: "Optional"
+                },
+                {
+                    name: "subjectId",
+                    label: "Subject",
+                    type: "select",
+                    value: "",
+                    options: [
+                        {
+                            value: "",
+                            label: "No subject"
+                        },
+                        ...data.subjects.map(subject => ({
+                            value: subject.id,
+                            label: subject.name
+                        }))
+                    ]
+                },
+                {
+                    name: "dueDate",
+                    label: "Due date",
+                    type: "date"
+                },
+                {
+                    name: "priority",
+                    label: "Priority",
+                    type: "select",
+                    value: "medium",
+                    options: [
+                        {
+                            value: "low",
+                            label: "Low"
+                        },
+                        {
+                            value: "medium",
+                            label: "Medium"
+                        },
+                        {
+                            value: "high",
+                            label: "High"
+                        }
+                    ]
+                }
+            ],
+            values => {
+                data.tasks.push({
+                    id: generateId("task"),
+                    title: values.title.trim(),
+                    description: values.description.trim(),
+                    subjectId: values.subjectId || null,
+                    dueDate: values.dueDate || null,
+                    priority: values.priority || "medium",
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                });
 
-    updateStats();
-}
+                saveData();
+                renderAll();
 
+                showToast("Task added.");
+            }
+        );
+    }
 
-/* =========================================================
-   INITIALIZE APP
-========================================================= */
+    function editTask(id) {
+        const task = data.tasks.find(
+            item => item.id === id
+        );
 
-function initializeApp() {
+        if (!task) return;
 
-    loadData();
+        openModal(
+            "Edit Task",
+            [
+                {
+                    name: "title",
+                    label: "Task",
+                    value: task.title,
+                    required: true
+                },
+                {
+                    name: "description",
+                    label: "Description",
+                    type: "textarea",
+                    value: task.description
+                },
+                {
+                    name: "subjectId",
+                    label: "Subject",
+                    type: "select",
+                    value: task.subjectId || "",
+                    options: [
+                        {
+                            value: "",
+                            label: "No subject"
+                        },
+                        ...data.subjects.map(subject => ({
+                            value: subject.id,
+                            label: subject.name
+                        }))
+                    ]
+                },
+                {
+                    name: "dueDate",
+                    label: "Due date",
+                    type: "date",
+                    value: task.dueDate || ""
+                },
+                {
+                    name: "priority",
+                    label: "Priority",
+                    type: "select",
+                    value: task.priority || "medium",
+                    options: [
+                        {
+                            value: "low",
+                            label: "Low"
+                        },
+                        {
+                            value: "medium",
+                            label: "Medium"
+                        },
+                        {
+                            value: "high",
+                            label: "High"
+                        }
+                    ]
+                }
+            ],
+            values => {
+                task.title = values.title.trim();
+                task.description = values.description.trim();
+                task.subjectId = values.subjectId || null;
+                task.dueDate = values.dueDate || null;
+                task.priority = values.priority || "medium";
 
-    loadTheme();
+                saveData();
+                renderAll();
 
-    updateGreeting();
+                showToast("Task updated.");
+            }
+        );
+    }
 
-    updateTimerDisplay();
+    /* =========================================================
+       DEADLINE MODALS
+       ========================================================= */
 
-    setupModalEvents();
+    function addDeadline() {
+        openModal(
+            "Add Deadline",
+            [
+                {
+                    name: "title",
+                    label: "Deadline",
+                    placeholder: "e.g. Research Paper",
+                    required: true
+                },
+                {
+                    name: "description",
+                    label: "Details",
+                    type: "textarea"
+                },
+                {
+                    name: "date",
+                    label: "Date",
+                    type: "date",
+                    required: true
+                }
+            ],
+            values => {
+                data.deadlines.push({
+                    id: generateId("deadline"),
+                    title: values.title.trim(),
+                    description: values.description.trim(),
+                    date: values.date,
+                    createdAt: new Date().toISOString()
+                });
 
-    setupFilters();
+                saveData();
+                renderAll();
 
-    setupItemActions();
+                showToast("Deadline added.");
+            }
+        );
+    }
 
-    setupSearch();
+    function editDeadline(id) {
+        const deadline = data.deadlines.find(
+            item => item.id === id
+        );
 
-    setupButtons();
+        if (!deadline) return;
+
+        openModal(
+            "Edit Deadline",
+            [
+                {
+                    name: "title",
+                    label: "Deadline",
+                    value: deadline.title,
+                    required: true
+                },
+                {
+                    name: "description",
+                    label: "Details",
+                    type: "textarea",
+                    value: deadline.description
+                },
+                {
+                    name: "date",
+                    label: "Date",
+                    type: "date",
+                    value: deadline.date,
+                    required: true
+                }
+            ],
+            values => {
+                deadline.title = values.title.trim();
+                deadline.description = values.description.trim();
+                deadline.date = values.date;
+
+                saveData();
+                renderAll();
+
+                showToast("Deadline updated.");
+            }
+        );
+    }
+
+    /* =========================================================
+       SCHEDULE MODALS
+       ========================================================= */
+
+    const days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday"
+    ];
+
+    function addSchedule() {
+        openModal(
+            "Add Class",
+            [
+                {
+                    name: "day",
+                    label: "Day",
+                    type: "select",
+                    value: "Monday",
+                    options: days.map(day => ({
+                        value: day,
+                        label: day
+                    }))
+                },
+                {
+                    name: "subject",
+                    label: "Subject",
+                    placeholder: "e.g. General Mathematics",
+                    required: true
+                },
+                {
+                    name: "teacher",
+                    label: "Teacher",
+                    placeholder: "Teacher's name"
+                },
+                {
+                    name: "startTime",
+                    label: "Start time",
+                    type: "time",
+                    required: true
+                },
+                {
+                    name: "endTime",
+                    label: "End time",
+                    type: "time",
+                    required: true
+                }
+            ],
+            values => {
+                data.schedule.push({
+                    id: generateId("schedule"),
+                    day: values.day,
+                    subject: values.subject.trim(),
+                    teacher: values.teacher.trim(),
+                    startTime: values.startTime,
+                    endTime: values.endTime,
+                    createdAt: new Date().toISOString()
+                });
+
+                saveData();
+                renderAll();
+
+                showToast("Class added.");
+            }
+        );
+    }
+
+    function editSchedule(id) {
+        const item = data.schedule.find(
+            schedule => schedule.id === id
+        );
+
+        if (!item) return;
+
+        openModal(
+            "Edit Class",
+            [
+                {
+                    name: "day",
+                    label: "Day",
+                    type: "select",
+                    value: item.day,
+                    options: days.map(day => ({
+                        value: day,
+                        label: day
+                    }))
+                },
+                {
+                    name: "subject",
+                    label: "Subject",
+                    value: item.subject,
+                    required: true
+                },
+                {
+                    name: "teacher",
+                    label: "Teacher",
+                    value: item.teacher
+                },
+                {
+                    name: "startTime",
+                    label: "Start time",
+                    type: "time",
+                    value: item.startTime,
+                    required: true
+                },
+                {
+                    name: "endTime",
+                    label: "End time",
+                    type: "time",
+                    value: item.endTime,
+                    required: true
+                }
+            ],
+            values => {
+                item.day = values.day;
+                item.subject = values.subject.trim();
+                item.teacher = values.teacher.trim();
+                item.startTime = values.startTime;
+                item.endTime = values.endTime;
+
+                saveData();
+                renderAll();
+
+                showToast("Class updated.");
+            }
+        );
+    }
+
+    /* =========================================================
+       NOTES MODALS
+       ========================================================= */
+
+    function addNote() {
+        openModal(
+            "New Note",
+            [
+                {
+                    name: "title",
+                    label: "Title",
+                    placeholder: "Note title",
+                    required: true
+                },
+                {
+                    name: "folderId",
+                    label: "Folder",
+                    type: "select",
+                    value: "unfiled",
+                    options: data.folders.map(folder => ({
+                        value: folder.id,
+                        label: folder.name
+                    }))
+                },
+                {
+                    name: "content",
+                    label: "Note",
+                    type: "textarea",
+                    placeholder: "Write something..."
+                }
+            ],
+            values => {
+                const now = new Date().toISOString();
+
+                data.notes.push({
+                    id: generateId("note"),
+                    title: values.title.trim(),
+                    content: values.content.trim(),
+                    folderId: values.folderId || "unfiled",
+                    pinned: false,
+                    createdAt: now,
+                    updatedAt: now
+                });
+
+                saveData();
+                renderAll();
+
+                showToast("Note created.");
+            }
+        );
+    }
+
+    function editNote(id) {
+        const note = data.notes.find(
+            item => item.id === id
+        );
+
+        if (!note) return;
+
+        openModal(
+            "Edit Note",
+            [
+                {
+                    name: "title",
+                    label: "Title",
+                    value: note.title,
+                    required: true
+                },
+                {
+                    name: "folderId",
+                    label: "Folder",
+                    type: "select",
+                    value: note.folderId || "unfiled",
+                    options: data.folders.map(folder => ({
+                        value: folder.id,
+                        label: folder.name
+                    }))
+                },
+                {
+                    name: "content",
+                    label: "Note",
+                    type: "textarea",
+                    value: note.content
+                }
+            ],
+            values => {
+                note.title = values.title.trim();
+                note.content = values.content.trim();
+                note.folderId = values.folderId || "unfiled";
+                note.updatedAt = new Date().toISOString();
+
+                saveData();
+                renderAll();
+
+                showToast("Note updated.");
+            }
+        );
+    }
+
+    /* =========================================================
+       FOLDERS
+       ========================================================= */
+
+    function addFolder() {
+        openModal(
+            "New Folder",
+            [
+                {
+                    name: "name",
+                    label: "Folder name",
+                    placeholder: "e.g. School",
+                    required: true
+                }
+            ],
+            values => {
+                const name = values.name.trim();
+
+                if (!name) return;
+
+                const exists = data.folders.some(
+                    folder =>
+                        folder.name.toLowerCase() ===
+                        name.toLowerCase()
+                );
+
+                if (exists) {
+                    showToast("That folder already exists.");
+                    return;
+                }
+
+                data.folders.push({
+                    id: generateId("folder"),
+                    name
+                });
+
+                saveData();
+                renderAll();
+
+                showToast("Folder created.");
+            }
+        );
+    }
+
+    function manageFolders() {
+        if (data.folders.length <= 1) {
+            showToast("You don't have any custom folders yet.");
+            return;
+        }
+
+        openModal(
+            "Manage Folders",
+            data.folders
+                .filter(folder => folder.id !== "unfiled")
+                .map(folder => ({
+                    name: `folder_${folder.id}`,
+                    label: folder.name,
+                    value: folder.name
+                })),
+            values => {
+                let changed = false;
+
+                data.folders.forEach(folder => {
+                    if (folder.id === "unfiled") return;
+
+                    const newName = values[`folder_${folder.id}`]?.trim();
+
+                    if (newName && newName !== folder.name) {
+                        folder.name = newName;
+                        changed = true;
+                    }
+                });
+
+                if (changed) {
+                    saveData();
+                    renderAll();
+                    showToast("Folders updated.");
+                }
+            }
+        );
+    }
+
+    /* =========================================================
+       LINKS
+       ========================================================= */
+
+    function addLink() {
+        openModal(
+            "Add School Resource",
+            [
+                {
+                    name: "name",
+                    label: "Name",
+                    placeholder: "e.g. Google Classroom",
+                    required: true
+                },
+                {
+                    name: "url",
+                    label: "URL",
+                    placeholder: "https://...",
+                    required: true
+                }
+            ],
+            values => {
+                let url = values.url.trim();
+
+                if (
+                    url &&
+                    !url.startsWith("http://") &&
+                    !url.startsWith("https://")
+                ) {
+                    url = "https://" + url;
+                }
+
+                data.links.push({
+                    id: generateId("link"),
+                    name: values.name.trim(),
+                    url,
+                    createdAt: new Date().toISOString()
+                });
+
+                saveData();
+                renderAll();
+
+                showToast("Link added.");
+            }
+        );
+    }
+
+    function editLink(id) {
+        const link = data.links.find(
+            item => item.id === id
+        );
+
+        if (!link) return;
+
+        openModal(
+            "Edit School Resource",
+            [
+                {
+                    name: "name",
+                    label: "Name",
+                    value: link.name,
+                    required: true
+                },
+                {
+                    name: "url",
+                    label: "URL",
+                    value: link.url,
+                    required: true
+                }
+            ],
+            values => {
+                let url = values.url.trim();
+
+                if (
+                    url &&
+                    !url.startsWith("http://") &&
+                    !url.startsWith("https://")
+                ) {
+                    url = "https://" + url;
+                }
+
+                link.name = values.name.trim();
+                link.url = url;
+
+                saveData();
+                renderAll();
+
+                showToast("Link updated.");
+            }
+        );
+    }
+
+    /* =========================================================
+       TRASH
+       ========================================================= */
+
+    function moveToTrash(type, item) {
+        data.trash.unshift({
+            id: generateId("trash"),
+            type,
+            deletedAt: new Date().toISOString(),
+            original: structuredClone(item)
+        });
+    }
+
+    function restoreTrash(id) {
+        const trashItem = data.trash.find(
+            item => item.id === id
+        );
+
+        if (!trashItem) return;
+
+        const targetMap = {
+            subject: data.subjects,
+            task: data.tasks,
+            deadline: data.deadlines,
+            schedule: data.schedule,
+            note: data.notes,
+            link: data.links
+        };
+
+        const target = targetMap[trashItem.type];
+
+        if (!target) return;
+
+        const alreadyExists = target.some(
+            item => item.id === trashItem.original.id
+        );
+
+        if (!alreadyExists) {
+            target.push(trashItem.original);
+        }
+
+        data.trash = data.trash.filter(
+            item => item.id !== id
+        );
+
+        saveData();
+        renderAll();
+
+        showToast("Item restored.");
+    }
+
+    function permanentlyDeleteTrash(id) {
+        const item = data.trash.find(
+            trash => trash.id === id
+        );
+
+        if (!item) return;
+
+        data.trash = data.trash.filter(
+            trash => trash.id !== id
+        );
+
+        saveData();
+        renderTrash();
+
+        showToast("Permanently deleted.");
+    }
+
+    function emptyTrash() {
+        if (!data.trash.length) {
+            showToast("Trash is already empty.");
+            return;
+        }
+
+        const confirmed = confirm(
+            "Permanently delete everything in Trash?"
+        );
+
+        if (!confirmed) return;
+
+        data.trash = [];
+
+        saveData();
+        renderTrash();
+
+        showToast("Trash emptied.");
+    }
+
+    function renderTrash() {
+        const container = $("#trashList");
+
+        if (!container) return;
+
+        if (!data.trash.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🗑️</div>
+                    <p>Trash is empty.</p>
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = data.trash
+            .map(item => {
+                const typeName =
+                    item.type.charAt(0).toUpperCase() +
+                    item.type.slice(1);
+
+                const title =
+                    item.original.title ||
+                    item.original.name ||
+                    item.original.subject ||
+                    "Deleted item";
+
+                return `
+                    <div class="trash-card">
+                        <div class="trash-info">
+                            <span class="trash-type">
+                                ${escapeHTML(typeName)}
+                            </span>
+
+                            <h3>${escapeHTML(title)}</h3>
+
+                            <p>
+                                Deleted
+                                ${new Date(
+                                    item.deletedAt
+                                ).toLocaleString("en-PH", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit"
+                                })}
+                            </p>
+                        </div>
+
+                        <div class="card-actions">
+                            <button
+                                class="small-button"
+                                data-action="restore-trash"
+                                data-id="${item.id}"
+                            >
+                                Restore
+                            </button>
+
+                            <button
+                                class="icon-button danger"
+                                data-action="permanent-delete"
+                                data-id="${item.id}"
+                                title="Permanently delete"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("");
+    }
+
+    /* =========================================================
+       DELETE FUNCTIONS
+       ========================================================= */
+
+    function deleteItem(type, id) {
+        const map = {
+            subject: data.subjects,
+            task: data.tasks,
+            deadline: data.deadlines,
+            schedule: data.schedule,
+            note: data.notes,
+            link: data.links
+        };
+
+        const array = map[type];
+
+        if (!array) return;
+
+        const index = array.findIndex(
+            item => item.id === id
+        );
+
+        if (index === -1) return;
+
+        const item = array[index];
+
+        moveToTrash(type, item);
+
+        array.splice(index, 1);
+
+        saveData();
+        renderAll();
+
+        showToast("Moved to Trash.");
+    }
+
+    /* =========================================================
+       CALCULATOR
+       ========================================================= */
+
+    let calculatorExpression = "";
+
+    function updateCalculatorDisplay() {
+        const display = $("#calculatorDisplay");
+
+        if (!display) return;
+
+        display.textContent =
+            calculatorExpression || "0";
+    }
+
+    function calculateExpression(expression) {
+        if (!expression) return "";
+
+        let clean = expression
+            .replace(/×/g, "*")
+            .replace(/÷/g, "/")
+            .replace(/%/g, "/100");
+
+        if (!/^[0-9+\-*/().\s]+$/.test(clean)) {
+            throw new Error("Invalid expression");
+        }
+
+        // eslint-disable-next-line no-new-func
+        const result = Function(
+            `"use strict"; return (${clean})`
+        )();
+
+        if (
+            typeof result !== "number" ||
+            !Number.isFinite(result)
+        ) {
+            throw new Error("Invalid calculation");
+        }
+
+        return String(
+            Math.round((result + Number.EPSILON) * 1e12) /
+                1e12
+        );
+    }
+
+    function calculatorInput(value) {
+        if (value === "clear") {
+            calculatorExpression = "";
+        } else if (value === "delete") {
+            calculatorExpression =
+                calculatorExpression.slice(0, -1);
+        } else if (value === "=") {
+            try {
+                calculatorExpression =
+                    calculateExpression(
+                        calculatorExpression
+                    );
+            } catch {
+                calculatorExpression = "";
+                showToast("Invalid calculation.");
+            }
+        } else {
+            calculatorExpression += value;
+        }
+
+        updateCalculatorDisplay();
+    }
+
+    /* =========================================================
+       SCIENTIFIC CALCULATOR
+       ========================================================= */
+
+    let scientificExpression = "";
+    let angleMode = "DEG";
+
+    function updateScientificDisplay() {
+        const display = $("#scientificDisplay");
+
+        if (!display) return;
+
+        display.textContent =
+            scientificExpression || "0";
+    }
+
+    function angleToRadians(value) {
+        return angleMode === "DEG"
+            ? value * Math.PI / 180
+            : value;
+    }
+
+    function scientificCalculate(expression) {
+        if (!expression) return "";
+
+        let exp = expression;
+
+        exp = exp
+            .replace(/π/g, "Math.PI")
+            .replace(/\be\b/g, "Math.E")
+            .replace(/sqrt\(/g, "Math.sqrt(")
+            .replace(/sin\(/g, `Math.sin(${angleMode === "DEG" ? "Math.PI/180*" : ""}`)
+            .replace(/cos\(/g, `Math.cos(${angleMode === "DEG" ? "Math.PI/180*" : ""}`)
+            .replace(/tan\(/g, `Math.tan(${angleMode === "DEG" ? "Math.PI/180*" : ""}`)
+            .replace(/asin\(/g, `Math.asin(`)
+            .replace(/acos\(/g, `Math.acos(`)
+            .replace(/atan\(/g, `Math.atan(`)
+            .replace(/log\(/g, "Math.log10(")
+            .replace(/ln\(/g, "Math.log(")
+            .replace(/\^/g, "**")
+            .replace(/×/g, "*")
+            .replace(/÷/g, "/");
+
+        if (!/^[0-9+\-*/().,\sA-Za-z]+$/.test(exp)) {
+            throw new Error("Invalid expression");
+        }
+
+        // eslint-disable-next-line no-new-func
+        const result = Function(
+            `"use strict"; return (${exp})`
+        )();
+
+        if (
+            typeof result !== "number" ||
+            !Number.isFinite(result)
+        ) {
+            throw new Error("Invalid calculation");
+        }
+
+        return String(
+            Math.round((result + Number.EPSILON) * 1e12) /
+                1e12
+        );
+    }
+
+    function scientificInput(value) {
+        if (value === "clear") {
+            scientificExpression = "";
+        } else if (value === "delete") {
+            scientificExpression =
+                scientificExpression.slice(0, -1);
+        } else if (value === "=") {
+            try {
+                scientificExpression =
+                    scientificCalculate(
+                        scientificExpression
+                    );
+            } catch {
+                scientificExpression = "";
+                showToast("Invalid calculation.");
+            }
+        } else if (value === "square") {
+            scientificExpression += "^2";
+        } else if (value === "sqrt") {
+            scientificExpression += "sqrt(";
+        } else if (value === "sin") {
+            scientificExpression += "sin(";
+        } else if (value === "cos") {
+            scientificExpression += "cos(";
+        } else if (value === "tan") {
+            scientificExpression += "tan(";
+        } else if (value === "asin") {
+            scientificExpression += "asin(";
+        } else if (value === "acos") {
+            scientificExpression += "acos(";
+        } else if (value === "atan") {
+            scientificExpression += "atan(";
+        } else if (value === "log") {
+            scientificExpression += "log(";
+        } else if (value === "ln") {
+            scientificExpression += "ln(";
+        } else if (value === "inverse") {
+            scientificExpression = `1/(${scientificExpression || "0"})`;
+        } else {
+            scientificExpression += value;
+        }
+
+        updateScientificDisplay();
+    }
+
+    function setupCalculators() {
+        $$("[data-calculator]").forEach(button => {
+            button.addEventListener("click", () => {
+                calculatorInput(
+                    button.dataset.calculator
+                );
+            });
+        });
+
+        $$("[data-scientific]").forEach(button => {
+            button.addEventListener("click", () => {
+                scientificInput(
+                    button.dataset.scientific
+                );
+            });
+        });
+
+        $("#angleModeButton")?.addEventListener(
+            "click",
+            () => {
+                angleMode =
+                    angleMode === "DEG"
+                        ? "RAD"
+                        : "DEG";
+
+                $("#angleModeButton").textContent =
+                    angleMode;
+
+                showToast(
+                    `Scientific calculator: ${angleMode}`
+                );
+            }
+        );
+
+        updateCalculatorDisplay();
+        updateScientificDisplay();
+    }
+
+    /* =========================================================
+       STUDY TIMER
+       ========================================================= */
+
+    let timerSeconds = 0;
+    let timerInterval = null;
+    let timerRunning = false;
+
+    function formatTimer(seconds) {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+
+        return [
+            String(hrs).padStart(2, "0"),
+            String(mins).padStart(2, "0"),
+            String(secs).padStart(2, "0")
+        ].join(":");
+    }
+
+    function updateTimerDisplay() {
+        const display = $("#timerDisplay");
+
+        if (display) {
+            display.textContent =
+                formatTimer(timerSeconds);
+        }
+
+        const status = $("#timerStatus");
+
+        if (status) {
+            status.textContent = timerRunning
+                ? "Studying..."
+                : timerSeconds > 0
+                ? "Paused"
+                : "Ready";
+        }
+    }
+
+    function startTimer() {
+        if (timerRunning) return;
+
+        timerRunning = true;
+
+        timerInterval = setInterval(() => {
+            timerSeconds++;
+            updateTimerDisplay();
+        }, 1000);
+
+        const button = $("#timerStart");
+
+        if (button) {
+            button.textContent = "Pause";
+        }
+
+        updateTimerDisplay();
+    }
+
+    function pauseTimer() {
+        if (!timerRunning) return;
+
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerRunning = false;
+
+        const button = $("#timerStart");
+
+        if (button) {
+            button.textContent = "Resume";
+        }
+
+        updateTimerDisplay();
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+
+        timerInterval = null;
+        timerRunning = false;
+        timerSeconds = 0;
+
+        const button = $("#timerStart");
+
+        if (button) {
+            button.textContent = "Start";
+        }
+
+        updateTimerDisplay();
+    }
+
+    function setupTimer() {
+        $("#timerStart")?.addEventListener("click", () => {
+            if (timerRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        });
+
+        $("#timerReset")?.addEventListener(
+            "click",
+            resetTimer
+        );
+
+        updateTimerDisplay();
+    }
+
+    /* =========================================================
+       GLOBAL SEARCH
+       ========================================================= */
+
+    function performSearch(query) {
+        const term = query.trim().toLowerCase();
+
+        if (!term) {
+            renderAll();
+            return;
+        }
+
+        const matches = [];
+
+        data.subjects.forEach(item => {
+            if (
+                item.name
+                    .toLowerCase()
+                    .includes(term)
+            ) {
+                matches.push({
+                    type: "Subject",
+                    title: item.name
+                });
+            }
+        });
+
+        data.tasks.forEach(item => {
+            if (
+                `${item.title} ${item.description || ""}`
+                    .toLowerCase()
+                    .includes(term)
+            ) {
+                matches.push({
+                    type: "Task",
+                    title: item.title
+                });
+            }
+        });
+
+        data.deadlines.forEach(item => {
+            if (
+                `${item.title} ${item.description || ""}`
+                    .toLowerCase()
+                    .includes(term)
+            ) {
+                matches.push({
+                    type: "Deadline",
+                    title: item.title
+                });
+            }
+        });
+
+        data.notes.forEach(item => {
+            if (
+                `${item.title} ${item.content || ""}`
+                    .toLowerCase()
+                    .includes(term)
+            ) {
+                matches.push({
+                    type: "Note",
+                    title: item.title
+                });
+            }
+        });
+
+        data.schedule.forEach(item => {
+            if (
+                `${item.day} ${item.subject} ${item.teacher || ""}`
+                    .toLowerCase()
+                    .includes(term)
+            ) {
+                matches.push({
+                    type: "Class",
+                    title: `${item.subject} — ${item.day}`
+                });
+            }
+        });
+
+        data.links.forEach(item => {
+            if (
+                `${item.name} ${item.url}`
+                    .toLowerCase()
+                    .includes(term)
+            ) {
+                matches.push({
+                    type: "Link",
+                    title: item.name
+                });
+            }
+        });
+
+        const container = $("#searchResults");
+
+        if (!container) {
+            // If the current HTML doesn't have a dedicated
+            // search result area, show the results in a toast.
+            if (!matches.length) {
+                showToast("No results found.");
+            } else {
+                showToast(
+                    `${matches.length} result${
+                        matches.length === 1 ? "" : "s"
+                    } found.`
+                );
+            }
+
+            return;
+        }
+
+        if (!matches.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No results found.</p>
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = matches
+            .map(
+                result => `
+                <div class="search-result">
+                    <span>${escapeHTML(result.type)}</span>
+                    <strong>${escapeHTML(result.title)}</strong>
+                </div>
+            `
+            )
+            .join("");
+    }
+
+    function setupSearch() {
+        $("#globalSearch")?.addEventListener(
+            "input",
+            event => {
+                performSearch(event.target.value);
+            }
+        );
+    }
+
+    /* =========================================================
+       EXPORT / IMPORT
+       ========================================================= */
+
+    function exportData() {
+        const backup = {
+            app: "Due Tomorrow, Do Tomorrow",
+            exportedAt: new Date().toISOString(),
+            data
+        };
+
+        const blob = new Blob(
+            [JSON.stringify(backup, null, 2)],
+            {
+                type: "application/json"
+            }
+        );
+
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download =
+            "due-tomorrow-backup.json";
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(url);
+
+        showToast("Backup exported.");
+    }
+
+    function importData() {
+        const input = document.createElement("input");
+
+        input.type = "file";
+        input.accept = ".json,application/json";
+
+        input.addEventListener("change", event => {
+            const file = event.target.files?.[0];
+
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = () => {
+                try {
+                    const imported = JSON.parse(
+                        reader.result
+                    );
+
+                    const importedData =
+                        imported.data || imported;
+
+                    if (
+                        !importedData ||
+                        typeof importedData !==
+                            "object"
+                    ) {
+                        throw new Error(
+                            "Invalid backup"
+                        );
+                    }
+
+                    const confirmed = confirm(
+                        "Import this backup? Your current local data will be replaced."
+                    );
+
+                    if (!confirmed) return;
+
+                    data = {
+                        ...structuredClone(
+                            defaultData
+                        ),
+                        ...importedData
+                    };
+
+                    if (!data.folders?.length) {
+                        data.folders = [
+                            {
+                                id: "unfiled",
+                                name: "Unfiled"
+                            }
+                        ];
+                    }
+
+                    saveData();
+                    applyTheme();
+                    renderAll();
+
+                    showToast("Backup imported.");
+                } catch (error) {
+                    console.error(error);
+                    showToast(
+                        "That file is not a valid backup."
+                    );
+                }
+            };
+
+            reader.readAsText(file);
+        });
+
+        input.click();
+    }
+
+    /* =========================================================
+       QUICK ACTIONS
+       ========================================================= */
+
+    function setupQuickActions() {
+        $("#addTaskButton")?.addEventListener(
+            "click",
+            addTask
+        );
+
+        $("#addSubjectButton")?.addEventListener(
+            "click",
+            addSubject
+        );
+
+        $("#addDeadlineButton")?.addEventListener(
+            "click",
+            addDeadline
+        );
+
+        $("#addNoteButton")?.addEventListener(
+            "click",
+            addNote
+        );
+
+        $("#addScheduleButton")?.addEventListener(
+            "click",
+            addSchedule
+        );
+
+        $("#addFolderButton")?.addEventListener(
+            "click",
+            addFolder
+        );
+
+        $("#manageFoldersButton")?.addEventListener(
+            "click",
+            manageFolders
+        );
+
+        $("#emptyTrashButton")?.addEventListener(
+            "click",
+            emptyTrash
+        );
+
+        $("#exportButton")?.addEventListener(
+            "click",
+            exportData
+        );
+
+        $("#importButton")?.addEventListener(
+            "click",
+            importData
+        );
+    }
+
+    /* =========================================================
+       EVENT DELEGATION
+       ========================================================= */
+
+    document.addEventListener("click", event => {
+        const button =
+            event.target.closest("[data-action]");
+
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+
+        switch (action) {
+            case "add-subject":
+                addSubject();
+                break;
+
+            case "edit-subject":
+                editSubject(id);
+                break;
+
+            case "delete-subject":
+                deleteItem("subject", id);
+                break;
+
+            case "toggle-task": {
+                const task = data.tasks.find(
+                    item => item.id === id
+                );
+
+                if (!task) return;
+
+                task.completed = !task.completed;
+
+                saveData();
+                renderAll();
+
+                showToast(
+                    task.completed
+                        ? "Task completed!"
+                        : "Task marked active."
+                );
+
+                break;
+            }
+
+            case "edit-task":
+                editTask(id);
+                break;
+
+            case "delete-task":
+                deleteItem("task", id);
+                break;
+
+            case "edit-deadline":
+                editDeadline(id);
+                break;
+
+            case "delete-deadline":
+                deleteItem("deadline", id);
+                break;
+
+            case "add-schedule":
+                addSchedule();
+                break;
+
+            case "edit-schedule":
+                editSchedule(id);
+                break;
+
+            case "delete-schedule":
+                deleteItem("schedule", id);
+                break;
+
+            case "add-note":
+                addNote();
+                break;
+
+            case "edit-note":
+                editNote(id);
+                break;
+
+            case "delete-note":
+                deleteItem("note", id);
+                break;
+
+            case "pin-note": {
+                const note = data.notes.find(
+                    item => item.id === id
+                );
+
+                if (!note) return;
+
+                note.pinned = !note.pinned;
+                note.updatedAt =
+                    new Date().toISOString();
+
+                saveData();
+                renderNotes();
+
+                showToast(
+                    note.pinned
+                        ? "Note pinned."
+                        : "Note unpinned."
+                );
+
+                break;
+            }
+
+            case "add-link":
+                addLink();
+                break;
+
+            case "edit-link":
+                editLink(id);
+                break;
+
+            case "delete-link":
+                deleteItem("link", id);
+                break;
+
+            case "restore-trash":
+                restoreTrash(id);
+                break;
+
+            case "permanent-delete":
+                permanentlyDeleteTrash(id);
+                break;
+        }
+    });
+
+    /* =========================================================
+       RENDER EVERYTHING
+       ========================================================= */
+
+    function renderAll() {
+        renderSubjects();
+        renderTasks();
+        renderDeadlines();
+        renderSchedule();
+        renderFolderFilter();
+        renderNotes();
+        renderLinks();
+        renderTrash();
+        renderStats();
+        updateWelcome();
+    }
+
+    /* =========================================================
+       KEYBOARD SHORTCUTS
+       ========================================================= */
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            closeModal();
+        }
+    });
+
+    /* =========================================================
+       START APP
+       ========================================================= */
 
     setupTheme();
-
-    setupExport();
-
-    setupImport();
-
-    setupClearAll();
-
+    setupTaskFilters();
+    setupNotes();
+    setupCalculators();
     setupTimer();
-
-    setupCramAndJam();
-
-    initializeAudius();
+    setupSearch();
+    setupQuickActions();
 
     renderAll();
-}
 
-
-/* =========================================================
-   START
-========================================================= */
-
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        initializeApp
+    console.log(
+        "Due Tomorrow, Do Tomorrow loaded successfully."
     );
-
-} else {
-
-    initializeApp();
-
-}
+});
